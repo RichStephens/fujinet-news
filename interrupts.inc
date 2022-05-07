@@ -94,6 +94,39 @@ asm {
 
     mwa #dlitop atari.vdslst
     
+    ldy #0
+    lda showSpinner
+    bne drawspinner
+
+clearSpinner
+@
+    lda #0
+    sta PMG + $200 + SPINNER_TOP,y
+    sta PMG + $280 + SPINNER_TOP,y
+    iny
+    cpy #7
+    bne @-
+    
+    jmp spinnerEnd
+    
+drawspinner    
+    lda rtclok+2 
+    lsr 
+    and #7
+    asl:asl:asl
+    tax
+@
+    lda SPRITES,x
+    sta PMG + $200 + SPINNER_TOP,y
+    lda SPRITES+64,x
+    sta PMG + $280 + SPINNER_TOP,y
+    inx 
+    iny
+    cpy #7
+    bne @-
+
+spinnerEnd
+    
     plr ; restore registers
 };
 end;
@@ -111,6 +144,7 @@ asm {
     sta atari.color2
     lda #0
     sta atari.color1
+    
     
 
     plr ; restore registers

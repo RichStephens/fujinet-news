@@ -1,6 +1,6 @@
 program fujinews;
 {$librarypath '../blibs/'}
-uses atari, http_client, crt, b_system;
+uses atari, http_client, crt, b_system, joystick;
 
 const 
 {$i const.inc}
@@ -18,10 +18,12 @@ var
     dlistNum: byte;
     dliHeadCount: byte;
     selHead: byte;
-    showSpinner: boolean;
     userInput: byte;
+    inputDelay: byte;
     oldvbl: pointer;
-    
+    showSpinner: boolean;
+    HELPFG: byte absolute $2DC;
+    spinnerFrames: array [0..15,0..7] of byte absolute SPRITES;
     theme: array [0..8] of byte = (
         //border    //menuBG    //menuFG    //headBG    //headFG    //headBGon  //headFGon //contentBG //contentFG
         $0,         $04,        $08,        $02,         $06,        $92,         $9f,       $92,        $9a
@@ -67,8 +69,8 @@ asm
         sta result;
 end;
         
-procedure getStrFromBuf(strPtr:word;delimiter:char;direct:boolean);     
-var b:byte;
+procedure getStrFromBuf(strPtr:word;delimiter:char;direct:boolean;lengthLimit:word);     
+var b:word;
     c:byte;
 begin
     b := 1;
@@ -80,6 +82,8 @@ begin
             poke(strPtr + b, c);
             if not direct then poke(strPtr, b);
             inc(b);
+            dec(lengthLimit);
+            if lengthLimit = 0 then exit;
         end;
         inc(bufPtr);
     end;
@@ -123,22 +127,60 @@ begin
     end;
 end;
     
-
 function getUserInput:byte;
 var key:char;
-
+    joy:byte;
+    longPress:byte;
+    fireDown:boolean;
+(*    
 procedure ShowKey;
 begin
     selectWindow(VRAM_MENU);
     write(byte(key));
 end;
-
+*)
 begin
     result := NONE;
+    fireDown := false;
+    
     repeat
         pause;
+        if inputDelay>0 then Dec(inputDelay)
+        else begin
+            joy := (not stick0) and $f;
+            if strig0 = 0 then fireDown := true;
+            if fireDown then begin
+                inc(longPress);
+            end;
+            if (strig0 = 1) and fireDown then begin
+                fireDown := false;
+                if longPress>LONGPRESS_TIME then begin
+                    result := I_QUIT;
+                end else begin
+                    result := I_ENTER;
+                end;
+                longPress := 0;
+            end;
+
+            if joy <> 0 then begin
+                if joy and 1 <> 0 then result := I_UP;
+                if joy and 2 <> 0 then result := I_DOWN;
+                if joy and 4 <> 0 then result := I_LEFT;
+                if joy and 8 <> 0 then result := I_RIGHT;
+                inputDelay := I_DELAY;
+            end;
+            
+            if HELPFG = 17 then begin
+                result := I_HELP;
+                inputDelay := I_DELAY;
+                HELPFG := 0;
+            end;
+            
+        end; 
+        if (strig0 = 1) and (stick0 = 15) then inputDelay := 0;
         if keypressed then begin
             key := ReadKey();
+            //showKey;
             case key of
                 'q','Q',char(27): result := I_QUIT;
                 char(29),char(61): result := I_DOWN;
@@ -153,13 +195,47 @@ begin
     until result <> NONE;
 end;
 
+procedure ShowHelp;
+begin
+    SetScreen(0);
+    clearScr;
+    selectWindow(VRAM_MENU);
+    Write(' FujiNews HELP');
+    selectWindow(VRAM_STATUS);
+    Write(' '+'Press any key to continue'*);
+    selectWindow(VRAM_CONTENT);
+    lmargin := 1;
+    Writeln;
+    Writeln('Navigate the application using');
+    Writeln('the arrow keys or joystick. ');
+    Writeln;
+    Writeln('Return'*' opens documents,');
+    Writeln;
+    Writeln('Escape'*' gets you backward,');
+    Writeln;
+    Writeln('TAB'*' shows article details,');
+    Writeln;
+    Writeln('Press Fire'*' to enter article,');
+    Writeln;
+    Writeln('Hold Fire'*' for a second to go back,');
+    Writeln;
+    Writeln('SELECT'*' switches colour themes.');
+    
+    lmargin := 0;
+
+    repeat
+        userInput := getUserInput();
+    until userInput <> NONE;
+    
+end;
+
 procedure ShowMainMenu;
 begin
     SetScreen(0);
     clearScr;
 
     selectWindow(VRAM_MENU);
-    Write(' FujiNews v.0.7');
+    Write(' FujiNews v.0.81.en');
     selectWindow(VRAM_STATUS);
     Write(' ','HELP'*' helps');
 
@@ -183,25 +259,27 @@ begin
         showCategories();
         userInput := getUserInput();
         case userInput of
-            I_RIGHT:    Inc(idSel);
-            I_LEFT:     Dec(idSel);
-            I_DOWN:     Inc(idSel,2);
-            I_UP:       Dec(idSel,2);
+            I_RIGHT,I_SPACE :   Inc(idSel);
+            I_LEFT :            Dec(idSel);
+            I_DOWN :            Inc(idSel,2);
+            I_UP :              Dec(idSel,2);
+            I_HELP :            begin
+                ShowHelp;
+                userInput := I_RELOAD;
+            end;
         end;
         if idSel>12 then idSel:=8;
         if idSel>8 then idSel:=0;
-    until (userInput = I_ENTER) or (userInput = I_QUIT);
-
+    until (userInput = I_ENTER) or (userInput = I_QUIT) or (userInput = I_RELOAD);
 end;    
 
 procedure GetCategoryHeaders;
 begin
     for b:=1 to peek(word(categories[idSel])) do urlCat[61 + b] := char(peek(word(categories[idSel]) + b));
     urlCat[61 + b]:=char(0);
-    pause;
-    nmien := $40;
+    showSpinner:=true;
     HTTP_Get(urlCat, @responseBuffer);
-    nmien := $c0;
+    showSpinner:=false;
 end;
 
 procedure GetArticle(id, artPage:byte);
@@ -212,33 +290,37 @@ begin
     i := b + 56;
     s := '&p=';
     for b := 1 to byte(s[0]) do urlPost[i + b] := s[b];
-    i := b + 59;
+    i := i + byte(s[0]);
     Str(artPage, s);
     Str(artPage, s);
     for b := 1 to byte(s[0]) do urlPost[i + b] := s[b];
     
     urlPost[i + b] := char(0);
 
-    pause;
-    nmien := $40;
+    showSpinner:=true;
     HTTP_Get(urlPost, @responseBuffer);
-    nmien := $c0;
+    showSpinner:=false;
 end;
 
 procedure ShowHeaders;
 begin
     selHead := NONE;
     clearScr;
+    selectWindow(VRAM_MENU);
+    Write(' Fetching Headers '*);
     GetCategoryHeaders;
     selectWindow(VRAM_STATUS);       
-    if HTTP_error <> 1 then write(' Error: ', HTTP_error)
-    else begin
+    if HTTP_error <> 1 then begin
+        write(' Error: ', HTTP_error);
+        Pause(100);
+        userInput := I_QUIT;
+    end else begin
 
         SetScreen(1);
         Write(' Received: ',HTTP_respSize,' bytes');
 
         selectWindow(VRAM_MENU);
-        Write(' Select Article ');
+        Write(' Select Article    ');
 
         gotoxy(40-peek(word(categories[idSel])),1);
         s[0] := char(peek(word(categories[idSel])));
@@ -250,9 +332,9 @@ begin
         idNum := 0;
         
         while(idNum<7) do begin
-            getStrFromBuf(word(@ids[idNum shl 3]),'|', false);
-            getStrFromBuf(VRAM_CONTENT + idnum shl 8 + 21,'|', true);
-            getStrFromBuf(LINE_WIDTH + VRAM_CONTENT + idnum shl 8,char($9b), true);
+            getStrFromBuf(word(@ids[idNum shl 3]),'|', false,0);
+            getStrFromBuf(VRAM_CONTENT + idnum shl 8 + 21,'|', true,0);
+            getStrFromBuf(LINE_WIDTH + VRAM_CONTENT + idnum shl 8,char($9b),true,216);
             inc(idNum);
         end;
         
@@ -288,6 +370,8 @@ begin
     repeat
         
         clearScr;
+        selectWindow(VRAM_MENU);
+        Write(' Fetching Article '*);
         selectWindow(VRAM_STATUS);
         GetArticle(id, artPage);
         
@@ -299,10 +383,10 @@ begin
     
             Write(' Received: ',HTTP_respSize,' bytes');
             bufPtr := 0;
-            getStrFromBuf(word(@artTitle), char($9b), false); // title
-            getStrFromBuf(word(@artDate), char($9b), false);
-            getStrFromBuf(word(@artSource), char($9b), false);
-            getStrFromBuf(word(@artPages), char($9b), false);
+            getStrFromBuf(word(@artTitle), char($9b), false, 255); // title
+            getStrFromBuf(word(@artDate), char($9b), false, 20);
+            getStrFromBuf(word(@artSource), char($9b), false, 255);
+            getStrFromBuf(word(@artPages), char($9b), false, 20);
             
             b:=1;
             copy:=false;
@@ -330,7 +414,7 @@ begin
 
             while(bufPtr<HTTP_respSize) do begin
                 s[0]:=char(0);
-                getStrFromBuf(word(@s), char($9b), false);
+                getStrFromBuf(word(@s), char($9b), false, 23*39);
                 Writeln(s);
             end;    
                 
@@ -342,7 +426,7 @@ begin
                     I_QUIT: begin
                         quit := true;
                     end;
-                    I_RIGHT, I_DOWN, I_SPACE: begin  // next
+                    I_RIGHT, I_DOWN, I_SPACE, I_ENTER: begin  // next
                         Inc(artPage);
                         reload := true;
                     end;
@@ -388,10 +472,29 @@ end;
 // ************************************************************************************************************
 // ************************************************************************************************************
 
+procedure InitPMG;
+begin
+    SDMCTL := %00101110;    
+    GPRIOR := $21;    
+    PMBASE := Hi(PMG);
+    GRACTL := %00000011;
+    pcolr0 := $04;
+    pcolr1 := $08;
+    sizep0 := 0;
+    sizep1 := 0;
+    hposp0 := SPINNER_LEFT;
+    hposp1 := SPINNER_LEFT;
+    
+end;
+
+
 begin
 
     move(pointer($e000), pointer(CHARSET), $400);
     move(pointer(LOGO_CHARSET), pointer(CHARSET + $200), $100);
+
+    pause; 
+    InitPMG;
 
     pause;
     nmien := $0;
@@ -406,24 +509,21 @@ begin
     idSel := 0;
     
     repeat
-        
         ShowMainMenu; // idSel is set (selected category Id)
-
-        if userInput <> I_QUIT then begin
+        if (userInput <> I_QUIT) and (userInput <> I_RELOAD) then begin
             repeat 
-            
                     ShowHeaders; // sets selHead (selected Header) of $ff - NONE
                     if selHead <> NONE then begin
                         ShowArticle(selHead);
                     end;
-                
             until userInput = I_QUIT;
             userInput := NONE;
         end;
-        
     until userInput = I_QUIT;
 
     pause;
+    SDMCTL := %00100010;    
+    GRACTL := %00000000;    
     SetIntVec(iVBL, oldvbl);
     nmien := $40;
     TextMode(0);

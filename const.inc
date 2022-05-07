@@ -3,8 +3,8 @@
 // 
 // ;*** I like to keep memory locations at top of this file
 //
-
-LOGO_CHARSET = $5700;
+PMG = $5400;
+LOGO_CHARSET = $5400;
 CHARSET = $5800;
 SPRITES = $5E00;
 DISPLAY_LIST_ADDRESS1 = $5F00; 
@@ -41,6 +41,10 @@ VRAM_SIZE = (8 * BLOCKSIZE);
 
 NONE = $FF;
 
+LONGPRESS_TIME = 50;
+
+I_DELAY = 16;
+
 I_QUIT = 0;
 I_ENTER = 1;
 I_SPACE = 2;
@@ -50,3 +54,7 @@ I_UP = 5;
 I_DOWN = 6;
 I_TAB = 7;
 I_HELP = 8;
+I_RELOAD = 9;
+
+SPINNER_LEFT = 122;
+SPINNER_TOP = 60;
