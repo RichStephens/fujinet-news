@@ -107,9 +107,9 @@ asm {
 
     lda adr.theme
     sta atari.color4
-    lda adr.theme+1
+    lda #2
     sta atari.color2
-    lda adr.theme+2
+    lda #0
     sta atari.color1
     
 

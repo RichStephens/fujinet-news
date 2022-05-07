@@ -355,15 +355,12 @@ begin
                         selectWindow(VRAM_MENU);                        
                         Write(' '+'ARTICLE DETAILS:'*);
                         selectWindow(VRAM_CONTENT);                        
-                        Writeln('Date: ',artDate);
+                        Writeln('Date:'*' ',artDate);
                         Writeln;
-                        Writeln('Title:');
-                        Writeln;
+                        Writeln('Title:'*);
                         Writeln(artTitle);
                         Writeln;
-                        Writeln('Source:');
-                        Writeln;
-                        Writeln(artSource);
+                        Writeln('Source:'*' ',artSource);
                         Writeln;
                         selectWindow(VRAM_STATUS);
                         Write(' '+'Press any key to continue'*);
