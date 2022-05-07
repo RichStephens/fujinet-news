@@ -1,6 +1,6 @@
 program fujinews;
 {$librarypath '../blibs/'}
-uses atari, http_client, crt, b_system, joystick;
+uses atari, http_client, crt, b_system, joystick, efast;
 
 const 
 {$i const.inc}
