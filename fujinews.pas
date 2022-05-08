@@ -448,7 +448,6 @@ begin
 
             SetScreen(1);
             Write(' Received: ',HTTP_respSize,' bytes');
-
             SelectWindow(VRAM_MENU);
             Write(' Select Article    ');
 
@@ -459,7 +458,6 @@ begin
             Write(s);
 
             bufPtr := 0;
-           
             GetStrFromBuf(word(@hPages), char($9b), false, 20);
             
             maxPage := GetMaxPage(hPages);
@@ -469,6 +467,7 @@ begin
             Gotoxy(35 - Length(hPages),1);
             Write('Page ',hPages);
             
+            // write headers
             idNum := 0;
             while(idNum < HEAD_MAX) and (bufPtr < HTTP_respSize) do begin
                 GetStrFromBuf(word(ids[idNum]),'|', false,8);
@@ -478,6 +477,7 @@ begin
             end;
             dec(idNum);
             
+            // if selected header do not exist, select last existing
             if selHead>idNum then selHead:=idNum;
             
             repeat
@@ -494,15 +494,18 @@ begin
                         reload := true;
                     end;
                 end;
+                // if goes below 0 switch to prev page
                 if selHead=$ff then begin
                     selHead := HEAD_MAX;
                     Dec(hPage);
                     reload := true;
+                // if goes above max header switch to next page
                 end else if selHead>idNum then begin
                     selHead:=0;
                     Inc(hPage);
                     reload := true;
                 end;
+                // keep hpage in pages range - loop from last to first
                 if reload then begin
                     if hPage<1 then hPage := maxPage;
                     if hPage>maxPage then hPage := 1;
@@ -622,12 +625,13 @@ end;
 // ************************************************************************************************************
 // ************************************************************************************************************
 
-
 begin
     
     LoadConfig();
     SetTheme(config.currentTheme);
+    // copy system charset to user location
     Move(pointer($e000), pointer(CHARSET), $400);
+    // update with Fujinet logo characters
     Move(pointer(LOGO_CHARSET), pointer(CHARSET + $200), $100);
 
     Pause; 
@@ -640,7 +644,6 @@ begin
     
     CursorOff;
     lmargin := 0;
-
     idSel := 0;
     
     repeat
