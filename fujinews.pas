@@ -25,12 +25,15 @@ var
     HELPFG: byte absolute $2DC;
     VDELAY: byte absolute $D01C;
     spinnerFrames: array [0..15,0..7] of byte absolute SPRITES;
-    theme: array [0..10] of byte = (
-        //border    //menuBG    //menuFG    //headBG    //headFG    //headBGon  //headFGon //contentBG //contentFG
-        $0,         $04,        $08,        $02,         $06,        $92,         $9f,       $92,        $9a,
-        //spinner0  // spinner1
-        $04,        $08
+    theme: array [0..THEME_LEN-1] of byte;
+    themes: array [0..THEME_COUNT-1,0..THEME_LEN-1] of byte = (
+    //  bg  menu    head    HEAD    content spinner
+      ( $00,$04,$08,$02,$06,$92,$9f,$92,$9a,$04,$08 ),
+      ( $00,$02,$06,$00,$06,$06,$0a,$00,$0a,$02,$04 ),
+      ( $0c,$0a,$06,$0a,$06,$0f,$02,$0c,$02,$04,$08 ),
+      ( $c0,$c0,$c4,$c2,$c6,$cc,$c2,$c2,$ca,$c4,$c8 )
     );
+    currentTheme: byte;
     
     cat0: string = 'top';
     cat1: string = 'world';
@@ -50,6 +53,8 @@ var
         $00, $00, $00, $00, $00, $00, $5d, $5e, $5f, $00, $00, $00, $00
     );    
     
+// **************************************************************************************** HELPERS  
+// ****************************************************************************************
     
 function ShouldISkip(c:byte):boolean;
 begin
@@ -121,8 +126,6 @@ begin
     GPRIOR := $21;    
     PMBASE := Hi(PMG);
     GRACTL := %00000011;
-    pcolr0 := theme[9];
-    pcolr1 := theme[10];
     sizep0 := 0;
     sizep1 := 0;
     sizem  := 0;
@@ -133,12 +136,26 @@ begin
     vdelay := $0f;
 end;
 
+procedure SetTheme(tnum:byte);
+begin
+    Pause;
+    Move(themes[tnum][0],@theme,THEME_LEN);
+    color4:=theme[0];
+end;
+
+procedure SwitchTheme;
+begin
+    Inc(currentTheme);
+    if currentTheme = THEME_COUNT then currentTheme := 0;
+    SetTheme(currentTheme);
+end;
+
 
 // *********************************************************************************************** IO
 // ***********************************************************************************************
 // ***********************************************************************************************
 
-function getUserInput:byte;
+function GetUserInput:byte;
 var key:char;
     joy:byte;
     longPress:byte;
@@ -151,44 +168,54 @@ begin
 end;
 *)
 begin
-    result := NONE;
+    
     fireDown := false;
     
     repeat
         Pause;
-        if inputDelay>0 then Dec(inputDelay)
-        else begin
-            joy := (not stick0) and $f;
-            if strig0 = 0 then fireDown := true;
-            if fireDown then begin
-                inc(longPress);
+        result := NONE;
+        joy := (not stick0) and $f;
+        
+        if strig0 = 0 then fireDown := true;    // FIRE DOWN
+        if fireDown then begin
+            inc(longPress);
+        end;
+        
+        if (strig0 = 1) and fireDown then begin // FIRE UP
+            fireDown := false;
+            if longPress>LONGPRESS_TIME then begin  // LONG PRESS
+                result := I_QUIT;
+            end else begin                          // SHORT PRESS
+                result := I_ENTER;
             end;
-            if (strig0 = 1) and fireDown then begin
-                fireDown := false;
-                if longPress>LONGPRESS_TIME then begin
-                    result := I_QUIT;
-                end else begin
-                    result := I_ENTER;
-                end;
-                longPress := 0;
-            end;
+            longPress := 0;
+        end;
 
-            if joy <> 0 then begin
-                if joy and 1 <> 0 then result := I_UP;
-                if joy and 2 <> 0 then result := I_DOWN;
-                if joy and 4 <> 0 then result := I_LEFT;
-                if joy and 8 <> 0 then result := I_RIGHT;
-                inputDelay := I_DELAY;
-            end;
-            
-            if HELPFG = 17 then begin
-                result := I_HELP;
-                inputDelay := I_DELAY;
-                HELPFG := 0;
-            end;
-            
-        end; 
-        if (strig0 = 1) and (stick0 = 15) then inputDelay := 0;
+        if joy <> 0 then begin                      // JOY MOVED
+            if joy and 1 <> 0 then result := I_UP;
+            if joy and 2 <> 0 then result := I_DOWN;
+            if joy and 4 <> 0 then result := I_LEFT;
+            if joy and 8 <> 0 then result := I_RIGHT;
+        end;
+        
+        if HELPFG = 17 then begin         // HELP
+            result := I_HELP;
+            HELPFG := 0;
+        end;
+        
+        if (CONSOL and 2) = 0 then begin  // SELECT
+            if inputDelay = 0 then SwitchTheme;
+            result := I_IDLE;
+        end;
+
+        if inputDelay>0 then begin
+            Dec(inputDelay);
+            if result = NONE then inputDelay := 0;  // NO INPUT
+            result := NONE;
+        end else begin
+            if result <> NONE then inputDelay := I_DELAY;
+        end;
+                
         if keypressed then begin
             key := ReadKey();
             //showKey;
@@ -309,7 +336,7 @@ begin
     DrawPager(0,0);
 
     SelectWindow(VRAM_MENU);
-    Write(' FujiNews v.0.85.en');
+    Write(' FujiNews v.0.89.en');
     SelectWindow(VRAM_STATUS);
     Write(' ','HELP'*' helps');
 
@@ -497,6 +524,9 @@ begin
                         Readkey;
                         reload := true;
                     end;
+                    else begin
+                        reload := false;
+                    end;
                 end;
                 
                 if reload then begin
@@ -518,6 +548,10 @@ end;
 
 
 begin
+    
+    currentTheme := 0;
+
+    SetTheme(currentTheme);
 
     Move(pointer($e000), pointer(CHARSET), $400);
     Move(pointer(LOGO_CHARSET), pointer(CHARSET + $200), $100);

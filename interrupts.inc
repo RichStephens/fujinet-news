@@ -144,8 +144,10 @@ asm {
     sta atari.color2
     lda #0
     sta atari.color1
-    
-    
+    lda adr.theme+9
+    sta atari.pcolr0
+    lda adr.theme+10
+    sta atari.pcolr1
 
     plr ; restore registers
     jmp $E462 ; jump to system VBL handler
