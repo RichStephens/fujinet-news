@@ -23,10 +23,13 @@ var
     oldvbl: pointer;
     showSpinner: boolean;
     HELPFG: byte absolute $2DC;
+    VDELAY: byte absolute $D01C;
     spinnerFrames: array [0..15,0..7] of byte absolute SPRITES;
-    theme: array [0..8] of byte = (
+    theme: array [0..10] of byte = (
         //border    //menuBG    //menuFG    //headBG    //headFG    //headBGon  //headFGon //contentBG //contentFG
-        $0,         $04,        $08,        $02,         $06,        $92,         $9f,       $92,        $9a
+        $0,         $04,        $08,        $02,         $06,        $92,         $9f,       $92,        $9a,
+        //spinner0  // spinner1
+        $04,        $08
     );
     
     cat0: string = 'top';
@@ -69,7 +72,7 @@ asm
         sta result;
 end;
         
-procedure getStrFromBuf(strPtr:word;delimiter:char;direct:boolean;lengthLimit:word);     
+procedure GetStrFromBuf(strPtr:word;delimiter:char;direct:boolean;lengthLimit:word);     
 var b:word;
     c:byte;
 begin
@@ -90,13 +93,13 @@ begin
     inc(bufPtr);
 end;
     
-procedure selectWindow(vram:word);
+procedure SelectWindow(vram:word);
 begin
     savmsc := vram;
-    gotoxy(1,1);    
+    Gotoxy(1,1);    
 end;
     
-procedure clearScr;
+procedure ClearScr;
 begin
     fillbyte(pointer(VRAM_ADDRESS),VRAM_SIZE,0);
 end;   
@@ -111,22 +114,30 @@ begin
         nmien := $c0;
 end;    
 
-procedure showCategories;
+procedure InitPMG;
+var i:byte;
 begin
-
-    savmsc := VRAM_CONTENT;
-    for idNum := 0 to 8 do begin
-            if idNum = idSel then begin
-                s[0] := char(peek(word(categories[idNum])));
-                for b := 1 to peek(word(categories[idNum])) do 
-                    s[b] := char(peek(word(categories[idNum]) + b) + 128);
-            end else 
-                move(categories[idNum], @s[0], peek(word(categories[idNum])) + 1);
-            gotoxy( ((idNum and 1) shl 4) + 6, ((idNum shr 1) shl 1) + 12);
-            Write(s);
-    end;
+    SDMCTL := %00101110;    
+    GPRIOR := $21;    
+    PMBASE := Hi(PMG);
+    GRACTL := %00000011;
+    pcolr0 := theme[9];
+    pcolr1 := theme[10];
+    sizep0 := 0;
+    sizep1 := 0;
+    sizem  := 0;
+    hposp0 := SPINNER_LEFT;
+    hposp1 := SPINNER_LEFT;
+    hposm0 := VBAR_LEFT;
+    hposm1 := VBAR_LEFT;
+    vdelay := $0f;
 end;
-    
+
+
+// *********************************************************************************************** IO
+// ***********************************************************************************************
+// ***********************************************************************************************
+
 function getUserInput:byte;
 var key:char;
     joy:byte;
@@ -135,7 +146,7 @@ var key:char;
 (*    
 procedure ShowKey;
 begin
-    selectWindow(VRAM_MENU);
+    SelectWindow(VRAM_MENU);
     write(byte(key));
 end;
 *)
@@ -144,7 +155,7 @@ begin
     fireDown := false;
     
     repeat
-        pause;
+        Pause;
         if inputDelay>0 then Dec(inputDelay)
         else begin
             joy := (not stick0) and $f;
@@ -195,15 +206,80 @@ begin
     until result <> NONE;
 end;
 
+procedure GetArticle(id, artPage:byte);
+var i:byte;
+begin
+    i := id shl 3;
+    for b := 1 to ids[i] do urlPost[57 + b] := char(ids[i + b]);
+    i := b + 56;
+    s := '&p=';
+    for b := 1 to byte(s[0]) do urlPost[i + b] := s[b];
+    i := i + byte(s[0]);
+    Str(artPage, s);
+    Str(artPage, s);
+    for b := 1 to byte(s[0]) do urlPost[i + b] := s[b];
+    
+    urlPost[i + b] := char(0);
+
+    showSpinner := true;
+    HTTP_Get(urlPost, @responseBuffer);
+    showSpinner := false;
+end;
+
+procedure GetCategoryHeaders;
+begin
+    for b:=1 to peek(word(categories[idSel])) do urlCat[61 + b] := char(peek(word(categories[idSel]) + b));
+    urlCat[61 + b]:=char(0);
+    showSpinner := true;
+    HTTP_Get(urlCat, @responseBuffer);
+    showSpinner := false;
+end;
+
+// *********************************************************************************************** UI DRAW
+// ***********************************************************************************************
+// ***********************************************************************************************
+// ***********************************************************************************************
+
+procedure DrawPager(p,m:byte);
+var ps,pl,b,i:byte;
+begin
+    if (p = 0) or (m = 0) then begin
+        fillByte(pointer(PAGER_OFFSET),92,0);
+    end else begin
+        pl:=(PAGER_HEIGHT+1) div m;
+        ps:=(p-1)*pl;
+        for i:=0 to PAGER_HEIGHT do begin
+            b:=1;
+            if (i>=ps) and (i<=ps+pl+1) then b:=4;
+            poke(PAGER_OFFSET + i, b);
+        end;
+    end;
+end;
+
+procedure ShowCategories;
+begin
+    savmsc := VRAM_CONTENT;
+    for idNum := 0 to 8 do begin
+        if idNum = idSel then begin
+            s[0] := char(peek(word(categories[idNum])));
+            for b := 1 to peek(word(categories[idNum])) do 
+                s[b] := char(peek(word(categories[idNum]) + b) + 128);
+        end else 
+            Move(categories[idNum], @s[0], peek(word(categories[idNum])) + 1);
+        Gotoxy( ((idNum and 1) shl 4) + 6, ((idNum shr 1) shl 1) + 12);
+        Write(s);
+    end;
+end;
+
 procedure ShowHelp;
 begin
     SetScreen(0);
-    clearScr;
-    selectWindow(VRAM_MENU);
+    ClearScr;
+    SelectWindow(VRAM_MENU);
     Write(' FujiNews HELP');
-    selectWindow(VRAM_STATUS);
+    SelectWindow(VRAM_STATUS);
     Write(' '+'Press any key to continue'*);
-    selectWindow(VRAM_CONTENT);
+    SelectWindow(VRAM_CONTENT);
     lmargin := 1;
     Writeln;
     Writeln('Navigate the application using');
@@ -220,31 +296,29 @@ begin
     Writeln('Hold Fire'*' for a second to go back,');
     Writeln;
     Writeln('SELECT'*' switches colour themes.');
-    
     lmargin := 0;
-
     repeat
         userInput := getUserInput();
     until userInput <> NONE;
-    
 end;
 
 procedure ShowMainMenu;
 begin
     SetScreen(0);
-    clearScr;
+    ClearScr;
+    DrawPager(0,0);
 
-    selectWindow(VRAM_MENU);
-    Write(' FujiNews v.0.81.en');
-    selectWindow(VRAM_STATUS);
+    SelectWindow(VRAM_MENU);
+    Write(' FujiNews v.0.85.en');
+    SelectWindow(VRAM_STATUS);
     Write(' ','HELP'*' helps');
 
     savmsc := VRAM_CONTENT;
     // draw logo
-    move(logo[0*13],pointer(savmsc+40*1+2),13);
-    move(logo[1*13],pointer(savmsc+40*2+2),13);
-    move(logo[2*13],pointer(savmsc+40*3+2),13);
-    move(logo[3*13],pointer(savmsc+40*4+2),13);
+    Move(logo[0*13],pointer(savmsc+40*1+2),13);
+    Move(logo[1*13],pointer(savmsc+40*2+2),13);
+    Move(logo[2*13],pointer(savmsc+40*3+2),13);
+    Move(logo[3*13],pointer(savmsc+40*4+2),13);
 
     Gotoxy(17,3);
     Write('News reader client');
@@ -256,7 +330,7 @@ begin
     Write('Select News Category:');
 
     repeat
-        showCategories();
+        ShowCategories();
         userInput := getUserInput();
         case userInput of
             I_RIGHT,I_SPACE :   Inc(idSel);
@@ -273,43 +347,15 @@ begin
     until (userInput = I_ENTER) or (userInput = I_QUIT) or (userInput = I_RELOAD);
 end;    
 
-procedure GetCategoryHeaders;
-begin
-    for b:=1 to peek(word(categories[idSel])) do urlCat[61 + b] := char(peek(word(categories[idSel]) + b));
-    urlCat[61 + b]:=char(0);
-    showSpinner:=true;
-    HTTP_Get(urlCat, @responseBuffer);
-    showSpinner:=false;
-end;
-
-procedure GetArticle(id, artPage:byte);
-var i:byte;
-begin
-    i := id shl 3;
-    for b := 1 to ids[i] do urlPost[57 + b] := char(ids[i + b]);
-    i := b + 56;
-    s := '&p=';
-    for b := 1 to byte(s[0]) do urlPost[i + b] := s[b];
-    i := i + byte(s[0]);
-    Str(artPage, s);
-    Str(artPage, s);
-    for b := 1 to byte(s[0]) do urlPost[i + b] := s[b];
-    
-    urlPost[i + b] := char(0);
-
-    showSpinner:=true;
-    HTTP_Get(urlPost, @responseBuffer);
-    showSpinner:=false;
-end;
-
 procedure ShowHeaders;
 begin
     selHead := NONE;
-    clearScr;
-    selectWindow(VRAM_MENU);
+    ClearScr;
+    DrawPager(0,0);
+    SelectWindow(VRAM_MENU);
     Write(' Fetching Headers '*);
     GetCategoryHeaders;
-    selectWindow(VRAM_STATUS);       
+    SelectWindow(VRAM_STATUS);       
     if HTTP_error <> 1 then begin
         write(' Error: ', HTTP_error);
         Pause(100);
@@ -319,10 +365,10 @@ begin
         SetScreen(1);
         Write(' Received: ',HTTP_respSize,' bytes');
 
-        selectWindow(VRAM_MENU);
+        SelectWindow(VRAM_MENU);
         Write(' Select Article    ');
 
-        gotoxy(40-peek(word(categories[idSel])),1);
+        Gotoxy(40-peek(word(categories[idSel])),1);
         s[0] := char(peek(word(categories[idSel])));
         for b := 1 to peek(word(categories[idSel])) do 
         s[b] := char(peek(word(categories[idSel]) + b) + 128);
@@ -332,9 +378,9 @@ begin
         idNum := 0;
         
         while(idNum<7) do begin
-            getStrFromBuf(word(@ids[idNum shl 3]),'|', false,0);
-            getStrFromBuf(VRAM_CONTENT + idnum shl 8 + 21,'|', true,0);
-            getStrFromBuf(LINE_WIDTH + VRAM_CONTENT + idnum shl 8,char($9b),true,216);
+            GetStrFromBuf(word(@ids[idNum shl 3]),'|', false,0);
+            GetStrFromBuf(VRAM_CONTENT + idnum shl 8 + 21,'|', true,0);
+            GetStrFromBuf(LINE_WIDTH + VRAM_CONTENT + idnum shl 8,char($9b),true,216);
             inc(idNum);
         end;
         
@@ -369,24 +415,25 @@ begin
     SetScreen(0);
     repeat
         
-        clearScr;
-        selectWindow(VRAM_MENU);
+        ClearScr;
+        
+        SelectWindow(VRAM_MENU);
         Write(' Fetching Article '*);
-        selectWindow(VRAM_STATUS);
+        SelectWindow(VRAM_STATUS);
         GetArticle(id, artPage);
         
         if HTTP_error <> 1 then begin
             write(' Error: ', HTTP_error);
-            pause(50);
+            Pause(50);
             quit:=true;
         end else begin
     
             Write(' Received: ',HTTP_respSize,' bytes');
             bufPtr := 0;
-            getStrFromBuf(word(@artTitle), char($9b), false, 255); // title
-            getStrFromBuf(word(@artDate), char($9b), false, 20);
-            getStrFromBuf(word(@artSource), char($9b), false, 255);
-            getStrFromBuf(word(@artPages), char($9b), false, 20);
+            GetStrFromBuf(word(@artTitle), char($9b), false, 255); // title
+            GetStrFromBuf(word(@artDate), char($9b), false, 20);
+            GetStrFromBuf(word(@artSource), char($9b), false, 255);
+            GetStrFromBuf(word(@artPages), char($9b), false, 20);
             
             b:=1;
             copy:=false;
@@ -400,28 +447,27 @@ begin
                 inc(b);
             end;
             Val(s, maxPage, b);
+            DrawPager(artPage,maxPage);
 
             savmsc := VRAM_STATUS;
             Gotoxy(35 - Length(artPages),1);
             Write('Page ',artPages);
 
-            selectWindow(VRAM_MENU);            
+            SelectWindow(VRAM_MENU);            
             Write(' ',artDate);
-            gotoxy(27,1);
+            Gotoxy(27,1);
             Write(' TAB '*' Details');
             
-            selectWindow(VRAM_CONTENT);
+            SelectWindow(VRAM_CONTENT);
 
             while(bufPtr<HTTP_respSize) do begin
                 s[0]:=char(0);
-                getStrFromBuf(word(@s), char($9b), false, 23*39);
+                GetStrFromBuf(word(@s), char($9b), false, 23*39);
                 Writeln(s);
             end;    
                 
             repeat
-
                 userInput := getUserInput();
-
                 case userInput of
                     I_QUIT: begin
                         quit := true;
@@ -435,10 +481,10 @@ begin
                         reload := true;
                     end;
                     I_TAB: begin  // tab - title
-                        clearScr;
-                        selectWindow(VRAM_MENU);                        
+                        ClearScr;
+                        SelectWindow(VRAM_MENU);                        
                         Write(' '+'ARTICLE DETAILS:'*);
-                        selectWindow(VRAM_CONTENT);                        
+                        SelectWindow(VRAM_CONTENT);                        
                         Writeln('Date:'*' ',artDate);
                         Writeln;
                         Writeln('Title:'*);
@@ -446,7 +492,7 @@ begin
                         Writeln;
                         Writeln('Source:'*' ',artSource);
                         Writeln;
-                        selectWindow(VRAM_STATUS);
+                        SelectWindow(VRAM_STATUS);
                         Write(' '+'Press any key to continue'*);
                         Readkey;
                         reload := true;
@@ -459,9 +505,7 @@ begin
                 end;
                 
             until quit or reload;            
-
         end;
-
     until quit;
     userInput := NONE;
 end;
@@ -472,31 +516,16 @@ end;
 // ************************************************************************************************************
 // ************************************************************************************************************
 
-procedure InitPMG;
-begin
-    SDMCTL := %00101110;    
-    GPRIOR := $21;    
-    PMBASE := Hi(PMG);
-    GRACTL := %00000011;
-    pcolr0 := $04;
-    pcolr1 := $08;
-    sizep0 := 0;
-    sizep1 := 0;
-    hposp0 := SPINNER_LEFT;
-    hposp1 := SPINNER_LEFT;
-    
-end;
-
 
 begin
 
-    move(pointer($e000), pointer(CHARSET), $400);
-    move(pointer(LOGO_CHARSET), pointer(CHARSET + $200), $100);
+    Move(pointer($e000), pointer(CHARSET), $400);
+    Move(pointer(LOGO_CHARSET), pointer(CHARSET + $200), $100);
 
-    pause; 
+    Pause; 
     InitPMG;
 
-    pause;
+    Pause;
     nmien := $0;
     GetIntVec(iVBL, oldvbl);
     SetIntVec(iVBL, @vbl);
@@ -521,7 +550,7 @@ begin
         end;
     until userInput = I_QUIT;
 
-    pause;
+    Pause;
     SDMCTL := %00100010;    
     GRACTL := %00000000;    
     SetIntVec(iVBL, oldvbl);
