@@ -375,6 +375,7 @@ begin
 end;    
 
 procedure ShowHeaders;
+var hPages:string[20];
 begin
     selHead := NONE;
     ClearScr;
@@ -403,6 +404,8 @@ begin
 
         bufPtr := 0;
         idNum := 0;
+        
+        GetStrFromBuf(word(@hPages), char($9b), false, 20);
         
         while(idNum<7) do begin
             GetStrFromBuf(word(@ids[idNum shl 3]),'|', false,0);
