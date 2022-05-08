@@ -12,13 +12,16 @@ type TConfig = record
 end;
 
 var
-    urlCat:  pChar = 'N:https://fujinet.online/8bitnews/news.php?t=a&ps=39x23&l=7&c=                   ';
-    urlPost: pChar = 'N:https://fujinet.online/8bitnews/news.php?t=a&ps=39x23&a=                ';
+    url: string[120];
+    api: string = 'N:https://fujinet.online/8bitnews/news.php?t=a&ps=39x23';
+    //urlCat:  pChar = 'N:https://fujinet.online/8bitnews/news.php?t=a&ps=39x23&l=7&c=                   ';
+    //urlPost: pChar = 'N:https://fujinet.online/8bitnews/news.php?t=a&ps=39x23&a=                ';
     responseBuffer: array [0..0] of byte absolute BUFFER_ADDRESS;
     s: string;
     bufPtr: word;
-    ids: array [0..80] of byte;
+    ids: array [0..7] of string[8];
     b,idNum,idSel: byte;
+    hPage:byte;
     dlistNum: byte;
     dliHeadCount: byte;
     selHead: byte;
@@ -28,7 +31,6 @@ var
     showSpinner: boolean;
     HELPFG: byte absolute $2DC;
     VDELAY: byte absolute $D01C;
-    spinnerFrames: array [0..15,0..7] of byte absolute SPRITES;
     theme: array [0..THEME_LEN-1] of byte;
     themes: array [0..THEME_COUNT-1,0..THEME_LEN-1] of byte = (
     //  bg  menu    head    HEAD    content spinner
@@ -97,6 +99,30 @@ asm
         ror
         sta result;
 end;
+    
+procedure SelectWindow(vram:word);
+begin
+    savmsc := vram;
+    Gotoxy(1,1);    
+end;
+
+function GetMaxPage(var pages:string):integer;
+var b: byte;
+    copy:boolean;
+begin
+    b:=1;
+    copy:=false;
+    s[0]:=char(0);
+    while (b<=byte(pages[0])) do begin
+        if copy then begin
+            inc(s[0]);
+            s[byte(s[0])]:=pages[b];
+        end;
+        if pages[b]='/' then copy:=true;
+        inc(b);
+    end;
+    Val(s, result, b);
+end;      
         
 procedure GetStrFromBuf(strPtr:word;delimiter:char;direct:boolean;lengthLimit:word);     
 var b:word;
@@ -119,12 +145,6 @@ begin
     inc(bufPtr);
 end;
     
-procedure SelectWindow(vram:word);
-begin
-    savmsc := vram;
-    Gotoxy(1,1);    
-end;
-    
 procedure ClearScr;
 begin
     fillbyte(pointer(VRAM_ADDRESS),VRAM_SIZE,0);
@@ -138,10 +158,10 @@ begin
         SDLSTL := a[snum];
         savmsc := VRAM_STATUS;
         nmien := $c0;
+        Pause;
 end;    
 
 procedure InitPMG;
-var i:byte;
 begin
     SDMCTL := %00101110;    
     GPRIOR := $21;    
@@ -254,33 +274,43 @@ begin
     until result <> NONE;
 end;
 
-procedure GetArticle(id, artPage:byte);
-var i:byte;
+procedure GetUrlData(page:byte);
 begin
-    i := id shl 3;
-    for b := 1 to ids[i] do urlPost[57 + b] := char(ids[i + b]);
-    i := b + 56;
-    s := '&p=';
-    for b := 1 to byte(s[0]) do urlPost[i + b] := s[b];
-    i := i + byte(s[0]);
-    Str(artPage, s);
-    Str(artPage, s);
-    for b := 1 to byte(s[0]) do urlPost[i + b] := s[b];
-    
-    urlPost[i + b] := char(0);
-
+    url := Concat(url, '&p=');
+    Str(page, s);
+    url := Concat(url, s);
+    url[Length(url)+1]:=char(0);
+    SetScreen(0);
     showSpinner := true;
-    HTTP_Get(urlPost, @responseBuffer);
+    HTTP_Get(@url[1], @responseBuffer[0]);
     showSpinner := false;
 end;
 
-procedure GetCategoryHeaders;
+procedure GetUrl;
 begin
-    for b:=1 to peek(word(categories[idSel])) do urlCat[61 + b] := char(peek(word(categories[idSel]) + b));
-    urlCat[61 + b]:=char(0);
-    showSpinner := true;
-    HTTP_Get(urlCat, @responseBuffer);
-    showSpinner := false;
+    str(0,s);
+    Concat(s,'');
+    Move(@api, @url, byte(api[0])+1);
+end;
+
+procedure GetArticle(id, artPage:byte);
+var sp:^string;
+begin
+    GetUrl;
+    url := Concat(url, '&a=');
+    sp := ids[id];
+    url := Concat(url, sp);
+    GetUrlData(artPage);
+end;
+
+procedure GetCategoryHeaders(hPage:byte);
+var sp:^string;
+begin
+    GetUrl;
+    url := Concat(url, '&l=7&c=');
+    sp := categories[idSel];
+    url := Concat(url, sp);
+    GetUrlData(hpage);
 end;
 
 // *********************************************************************************************** UI DRAW
@@ -357,7 +387,7 @@ begin
     DrawPager(0,0);
 
     SelectWindow(VRAM_MENU);
-    Write(' FujiNews v.0.90.en');
+    Write(' FujiNews v.0.98.en');
     SelectWindow(VRAM_STATUS);
     Write(' ','HELP'*' helps');
 
@@ -393,61 +423,95 @@ begin
         if idSel>12 then idSel:=8;
         if idSel>8 then idSel:=0;
     until (userInput = I_ENTER) or (userInput = I_QUIT) or (userInput = I_RELOAD);
+    selHead:=0;
+    hPage:=1;
 end;    
 
 procedure ShowHeaders;
 var hPages:string[20];
+    maxPage:integer;
+    reload:boolean;
 begin
-    selHead := NONE;
-    ClearScr;
-    DrawPager(0,0);
-    SelectWindow(VRAM_MENU);
-    Write(' Fetching Headers '*);
-    GetCategoryHeaders;
-    SelectWindow(VRAM_STATUS);       
-    if HTTP_error <> 1 then begin
-        write(' Error: ', HTTP_error);
-        Pause(100);
-        userInput := I_QUIT;
-    end else begin
-
-        SetScreen(1);
-        Write(' Received: ',HTTP_respSize,' bytes');
-
+    repeat
+        ClearScr;
+        reload:=false;
         SelectWindow(VRAM_MENU);
-        Write(' Select Article    ');
+        Write(' Fetching Headers '*);
+        GetCategoryHeaders(hpage);
+        SelectWindow(VRAM_STATUS);    
+           
+        if HTTP_error <> 1 then begin
+            write(' Error: ', HTTP_error);
+            Pause(100);
+            userInput := I_QUIT;
+        end else begin
 
-        Gotoxy(40-peek(word(categories[idSel])),1);
-        s[0] := char(peek(word(categories[idSel])));
-        for b := 1 to peek(word(categories[idSel])) do 
-        s[b] := char(peek(word(categories[idSel]) + b) + 128);
-        Write(s);
+            SetScreen(1);
+            Write(' Received: ',HTTP_respSize,' bytes');
 
-        bufPtr := 0;
-        idNum := 0;
-        
-        GetStrFromBuf(word(@hPages), char($9b), false, 20);
-        
-        while(idNum<7) do begin
-            GetStrFromBuf(word(@ids[idNum shl 3]),'|', false,0);
-            GetStrFromBuf(VRAM_CONTENT + idnum shl 8 + 21,'|', true,0);
-            GetStrFromBuf(LINE_WIDTH + VRAM_CONTENT + idnum shl 8,char($9b),true,216);
-            inc(idNum);
-        end;
-        
-        if selHead>6 then selHead:=0;
-        
-        repeat
-            userInput := getUserInput();
-            case userInput of
-                I_DOWN,I_RIGHT,I_SPACE  : Inc(selHead);
-                I_UP,I_LEFT             : Dec(selHead);
+            SelectWindow(VRAM_MENU);
+            Write(' Select Article    ');
+
+            Gotoxy(40-peek(word(categories[idSel])),1);
+            s[0] := char(peek(word(categories[idSel])));
+            for b := 1 to peek(word(categories[idSel])) do 
+            s[b] := char(peek(word(categories[idSel]) + b) + 128);
+            Write(s);
+
+            bufPtr := 0;
+           
+            GetStrFromBuf(word(@hPages), char($9b), false, 20);
+            
+            maxPage := GetMaxPage(hPages);
+            DrawPager(hPage,maxPage);
+
+            savmsc := VRAM_STATUS;
+            Gotoxy(35 - Length(hPages),1);
+            Write('Page ',hPages);
+            
+            idNum := 0;
+            while(idNum < HEAD_MAX) and (bufPtr < HTTP_respSize) do begin
+                GetStrFromBuf(word(ids[idNum]),'|', false,8);
+                GetStrFromBuf(VRAM_CONTENT + idnum shl 8 + 21,'|', true,0);
+                GetStrFromBuf(LINE_WIDTH + VRAM_CONTENT + idnum shl 8,char($9b),true,216);
+                inc(idNum);
             end;
-            if selHead>12 then selHead:=6;
-            if selHead>6 then selHead:=0;
-        until (userInput = I_QUIT) or (userInput = I_ENTER);            
-        if userInput = I_QUIT then selHead := NONE;
-    end;
+            dec(idNum);
+            
+            if selHead>idNum then selHead:=idNum;
+            
+            repeat
+                userInput := getUserInput();
+                case userInput of
+                    I_DOWN,I_SPACE  : Inc(selHead);
+                    I_UP            : Dec(selHead);
+                    I_RIGHT: begin  // next
+                        Inc(hPage);
+                        reload := true;
+                    end;
+                    I_LEFT: begin           // prev
+                        Dec(hPage);
+                        reload := true;
+                    end;
+                end;
+                if selHead=$ff then begin
+                    selHead := HEAD_MAX;
+                    Dec(hPage);
+                    reload := true;
+                end else if selHead>idNum then begin
+                    selHead:=0;
+                    Inc(hPage);
+                    reload := true;
+                end;
+                if reload then begin
+                    if hPage<1 then hPage := maxPage;
+                    if hPage>maxPage then hPage := 1;
+                end;
+                
+            until (userInput = I_QUIT) or (userInput = I_ENTER) or reload;            
+            if userInput = I_QUIT then selHead := NONE;
+        end;
+    until (userInput = I_QUIT) or (userInput = I_ENTER);            
 end;
 
 procedure ShowArticle(id: byte);
@@ -456,8 +520,7 @@ var artPage:byte;
     artDate:string[20];
     artPages:string[20];
     artSource:string;
-    copy, quit, reload:boolean;
-    b: byte;
+    quit, reload:boolean;
     maxPage:integer;
 begin
     quit := false;
@@ -486,18 +549,7 @@ begin
             GetStrFromBuf(word(@artSource), char($9b), false, 255);
             GetStrFromBuf(word(@artPages), char($9b), false, 20);
             
-            b:=1;
-            copy:=false;
-            s[0]:=char(0);
-            while (b<=byte(artPages[0])) do begin
-                if copy then begin
-                    inc(s[0]);
-                    s[byte(s[0])]:=artPages[b];
-                end;
-                if artPages[b]='/' then copy:=true;
-                inc(b);
-            end;
-            Val(s, maxPage, b);
+            maxPage := GetMaxPage(artPages);
             DrawPager(artPage,maxPage);
 
             savmsc := VRAM_STATUS;
