@@ -39,9 +39,9 @@ DL_JVB = %01000001; // Jump to begining
 
 dlist_category
   dta $70, $70 + DL_DLI, $42, a(vram_menu), $30 + DL_DLI, $42, a(vram_date0), $42, a(vram_head0), $02
-  dta $10 + DL_DLI, $42, a(vram_date1), $42, a(vram_head1), $02, $10 + DL_DLI, $42
-  dta a(vram_date2), $42, a(vram_head2), $02, $10 + DL_DLI, $42, a(vram_date3), $42, a(vram_head3)
-  dta $02, $10 + DL_DLI, $42, a(vram_date4), $42, a(vram_head4), $02, $10 + DL_DLI
+  dta $20 + DL_DLI, $42, a(vram_date1), $42, a(vram_head1), $02, $10 + DL_DLI, $42
+  dta a(vram_date2), $42, a(vram_head2), $02, $20 + DL_DLI, $42, a(vram_date3), $42, a(vram_head3)
+  dta $02, $10 + DL_DLI, $42, a(vram_date4), $42, a(vram_head4), $02, $20 + DL_DLI
   dta $42, a(vram_date5), $42, a(vram_head5), $02, $10 + DL_DLI, $42, a(vram_date6), $42
-  dta a(vram_head6), $02, $30 + DL_DLI, $42, a(vram_status), $41, a(dlist_category)
+  dta a(vram_head6), $02, $20 + DL_DLI, $42, a(vram_status), $41, a(dlist_category)
   

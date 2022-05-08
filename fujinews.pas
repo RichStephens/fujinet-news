@@ -325,7 +325,9 @@ begin
         fillByte(pointer(PAGER_OFFSET),92,0);
     end else begin
         pl:=(PAGER_HEIGHT+1) div m;
+        if pl = 0 then pl := 1;
         ps:=(p-1)*pl;
+        if ps>PAGER_HEIGHT then ps:=PAGER_HEIGHT;
         for i:=0 to PAGER_HEIGHT do begin
             b:=1;
             if (i>=ps) and (i<=ps+pl+1) then b:=4;
@@ -626,7 +628,6 @@ end;
 // ************************************************************************************************************
 
 begin
-    
     LoadConfig();
     SetTheme(config.currentTheme);
     // copy system charset to user location
@@ -635,7 +636,6 @@ begin
     Move(pointer(LOGO_CHARSET), pointer(CHARSET + $200), $100);
 
     Pause; 
-    InitPMG;
     nmien := $0;
     GetIntVec(iVBL, oldvbl);
     SetIntVec(iVBL, @vbl);
@@ -645,6 +645,8 @@ begin
     CursorOff;
     lmargin := 0;
     idSel := 0;
+
+    InitPMG;
     
     repeat
         ShowMainMenu; // idSel is set (selected category Id)
