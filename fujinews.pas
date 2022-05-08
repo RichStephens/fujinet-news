@@ -1,11 +1,15 @@
 program fujinews;
 {$librarypath '../blibs/'}
-uses atari, http_client, crt, b_system, joystick, efast;
+uses atari, http_client, crt, b_system, joystick, efast, fn_cookies;
 
 const 
 {$i const.inc}
 {$r resources.rc}
 {$i interrupts.inc}
+
+type TConfig = record
+    currentTheme:byte;
+end;
 
 var
     urlCat:  pChar = 'N:https://fujinet.online/8bitnews/news.php?t=a&ps=39x23&l=7&c=                   ';
@@ -31,9 +35,10 @@ var
       ( $00,$04,$08,$02,$06,$92,$9f,$92,$9a,$04,$08 ),
       ( $00,$02,$06,$00,$06,$06,$0a,$00,$0a,$02,$04 ),
       ( $0c,$0a,$06,$0a,$06,$0f,$02,$0c,$02,$04,$08 ),
-      ( $c0,$c0,$c4,$c2,$c6,$cc,$c2,$c2,$ca,$c4,$c8 )
+      ( $c0,$c0,$c4,$c2,$c6,$cc,$c2,$c2,$ca,$c4,$c8 ),
+      ( $10,$10,$14,$12,$16,$1c,$12,$12,$1a,$14,$18 )
     );
-    currentTheme: byte;
+    config: TConfig;
     
     cat0: string = 'top';
     cat1: string = 'world';
@@ -53,6 +58,22 @@ var
         $00, $00, $00, $00, $00, $00, $5d, $5e, $5f, $00, $00, $00, $00
     );    
     
+
+// *************************************************************************************** COOKIE ROUTINES
+
+procedure LoadConfig;
+begin
+    InitCookie(APPKEY_CREATOR_ID, APPKEY_APP_ID, APPKEY_CONFIG_KEY);
+    if GetCookie(pointer(BUFFER_ADDRESS)) = 1 then Move(responseBuffer[0], config, sizeOf(config));
+    if config.currentTheme>=THEME_COUNT then config.currentTheme := 0;
+end;
+
+procedure SaveConfig;
+begin
+    InitCookie(APPKEY_CREATOR_ID, APPKEY_APP_ID, APPKEY_CONFIG_KEY);
+    SetCookie(@config, sizeOf(config));
+end;    
+        
 // **************************************************************************************** HELPERS  
 // ****************************************************************************************
     
@@ -145,11 +166,11 @@ end;
 
 procedure SwitchTheme;
 begin
-    Inc(currentTheme);
-    if currentTheme = THEME_COUNT then currentTheme := 0;
-    SetTheme(currentTheme);
+    Inc(config.currentTheme);
+    if config.currentTheme = THEME_COUNT then config.currentTheme := 0;
+    SetTheme(config.currentTheme);
+    SaveConfig;
 end;
-
 
 // *********************************************************************************************** IO
 // ***********************************************************************************************
@@ -336,7 +357,7 @@ begin
     DrawPager(0,0);
 
     SelectWindow(VRAM_MENU);
-    Write(' FujiNews v.0.89.en');
+    Write(' FujiNews v.0.90.en');
     SelectWindow(VRAM_STATUS);
     Write(' ','HELP'*' helps');
 
@@ -552,17 +573,13 @@ end;
 
 begin
     
-    currentTheme := 0;
-
-    SetTheme(currentTheme);
-
+    LoadConfig();
+    SetTheme(config.currentTheme);
     Move(pointer($e000), pointer(CHARSET), $400);
     Move(pointer(LOGO_CHARSET), pointer(CHARSET + $200), $100);
 
     Pause; 
     InitPMG;
-
-    Pause;
     nmien := $0;
     GetIntVec(iVBL, oldvbl);
     SetIntVec(iVBL, @vbl);
