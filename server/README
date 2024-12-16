@@ -1,0 +1,4 @@
+# Server Code for News Clients
+
+Around October 2024 the original server back-end stop being able to access news items. It's been broken till Dec. 15th when Moz updated the backend with new API endpoints and the news is flowing again. No changes to clients were required.
+
