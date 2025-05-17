@@ -3,14 +3,12 @@
  * @author  Thomas Cherryhomes
  * @email   thom dot cherryhomes at gmail dot com
  * @license gpl v. 3, see LICENSE for details.
- * @verbose articles module
+ * @verbose fetch data into buffer
  */
 
-#ifndef ARTICLES_H
-#define ARTICLES_H
+#ifndef FETCH_H
+#define FETCH_H
 
-void articles(void);
-void articles_pu(void);
-void articles_pd(void);
+void fetch(char *url, char *buf);
 
-#endif /* ARTICLES_H */
+#endif /* FETCH_H */

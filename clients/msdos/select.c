@@ -27,7 +27,11 @@ State select(unsigned char x1,
              unsigned char m,
              unsigned char s,
              State p,
-             State n)
+             State n,
+             State pu,
+             State pd,
+             unsigned char *si
+    )
 {
     bar(x1,y1+(s*h),x2,h);
 
@@ -51,7 +55,18 @@ State select(unsigned char x1,
             }
             bar(x1,y1+(s*h),x2,h);
             break;
+        case 0x4900: // PgUp
+            if (pu == IGNORE)
+                break;
+            else
+                return pu;
+        case 0x5100: // PgDn
+            if (pd == IGNORE)
+                break;
+            else
+                return pd;
         case 0x1C0D: // ENTER
+            *si = s;
             return p;
         case 0x011B: // ESC
             return n;

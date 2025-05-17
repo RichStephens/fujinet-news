@@ -18,6 +18,9 @@ State select(unsigned char x1,
              unsigned char m,
              unsigned char s,
              State p,
-             State n);
+             State n,
+             State pu,
+             State pd,
+             unsigned char *si);
 
 #endif /* SELECT_H */

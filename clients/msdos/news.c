@@ -5,6 +5,7 @@
  * @license gpl v. 3, see LICENSE for details.
  */
 
+#include <stdlib.h>
 #include "screen.h"
 #include "topics.h"
 #include "articles.h"
@@ -25,9 +26,18 @@ void main(void)
         case ARTICLES:
             articles();
             break;
+        case ARTICLES_PU:
+            articles_pu();
+            break;
+        case ARTICLES_PD:
+            articles_pd();
+            break;
         case ARTICLE:
             article();
             break;
+        case EXIT:
+            clrscr();
+            exit(0);
         }
     }    
 }

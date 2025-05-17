@@ -53,5 +53,7 @@ void topics(void)
     for (i=0;i<9;i++)
         cputs(4,10+i,topic_titles[i]);
 
-    state=select(2,10,37,1,9,selected_topic,ARTICLES,EXIT);    
+    selected_articles_page = 1;
+    
+    state=select(2,10,37,1,9,selected_topic,ARTICLES,EXIT,IGNORE,IGNORE,&selected_topic);
 }

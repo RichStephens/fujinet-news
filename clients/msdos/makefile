@@ -7,7 +7,7 @@ LDFLAGS = SYSTEM dos OPTION MAP
 
 all: news.exe
 
-news.exe: news.obj screen.obj globals.obj topics.obj select.obj articles.obj article.obj
+news.exe: news.obj screen.obj globals.obj topics.obj select.obj articles.obj article.obj fetch.obj
 
 .obj.exe:
 	$(LD) $(LDFLAGS) NAME $@ file {$<} LIBRARY {clibs.lib}
