@@ -15,6 +15,24 @@
  */
 void bar(int y);
 
+
+/**
+ * @brief Draw text with underline on/off at line y
+ * @param y Vertical position (0-23)
+ * @param text The text to print
+ * @param on Underline on/off 
+ */
+void underline(int y, const char *text, BOOL on);
+
+/**
+ * @brief Draw a line of text across the screen with fg/bg colors
+ * @param y Vertical position (0-23)
+ * @param fgcolor The foreground color
+ * @param bgcolor The background color
+ * @param text The text to print 
+ */
+void hd_bar(int y, int fgcolor, int bgcolor, const char *text);
+
 /**
  * @brief draw shadow for color c at vert pos y
  * @param y Vertical position (0-15)

@@ -23,6 +23,7 @@ typedef enum _articles_state
     ARTICLES_EXIT,
     ARTICLES_NEXT_PAGE,
     ARTICLES_PREV_PAGE,
+    ARTICLES_GOTO_PAGE
 } ArticlesState;
 
 /** 

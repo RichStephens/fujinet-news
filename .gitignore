@@ -3,3 +3,4 @@
 *.opt
 *.dat
 *.ved
+.vscode/settings.json

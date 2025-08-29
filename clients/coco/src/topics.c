@@ -12,14 +12,8 @@
 #include "topics.h"
 #include "bar.h"
 
-#define true 1
-#define false 0
-#define MENU_Y 3
-
-#define ARROW_UP 0x5E
-#define ARROW_DOWN 0x0A
-#define ENTER 0x0D
-#define BREAK 0x03
+#define MENU_Y_32 3
+#define MENU_Y_40_80 8
 
 TopicState topicState = TOPICS_RESET;
 
@@ -50,28 +44,60 @@ TopicState topics_reset(void)
 
 TopicState topics_display(void)
 {
-    cls(3);
-    locate(0,0);
-    printf("      FUJINET  NEWS TOPICS      ");
-    shadow(1,0xA0);
-    bar(0);
+    if (textMode==32)
+    {
+        cls(3);
+        locate(0, 0);
+        printf("      FUJINET  NEWS TOPICS      ");
+        shadow(1, 0xA0);
+        bar(0);
 
-    locate(0,3);
-    
-    printf(" \x99 TOP STORIES\n");
-    printf(" \x9F WORLD NEWS\n");
-    printf(" \x8F BUSINESS\n");
-    printf(" \xAF SCIENCE\n");
-    printf(" \xBF TECHNOLOGY\n");
-    printf(" \xCF HEALTH\n");
-    printf(" \xDF ENTERTAINMENT\n");
-    printf(" \xEF POLITICS\n");
-    printf(" \xFF SPORTS\n");
+        locate(0, MENU_Y_32);
 
-    shadow(0x0C,0xA0);
-    
-    locate(0,15);
-    printf("SELECT WITH ARROWS, THEN ENTER.");
+        printf(" \x99 TOP STORIES\n");
+        printf(" \x9F WORLD NEWS\n");
+        printf(" \x8F BUSINESS\n");
+        printf(" \xAF SCIENCE\n");
+        printf(" \xBF TECHNOLOGY\n");
+        printf(" \xCF HEALTH\n");
+        printf(" \xDF ENTERTAINMENT\n");
+        printf(" \xEF POLITICS\n");
+        printf(" \xFF SPORTS\n");
+
+        shadow(0x0C, 0xA0);
+
+        locate(0, 15);
+        printf("SELECT WITH ARROWS, THEN ENTER.");
+    }
+    else
+    {
+        cls(1);
+        locate(0, 0);
+        if (textMode == 40)
+        {
+            hd_bar(0, FG_BLACK, BG_GREEN, "          FUJINET  NEWS TOPICS");
+            //printf("********* FUJINET  NEWS TOPICS *********");
+        }
+        else
+        {
+            hd_bar(0, FG_BLACK, BG_GREEN, "                              FUJINET  NEWS TOPICS");
+            //printf("***************************** FUJINET  NEWS TOPICS *****************************");
+        } 
+
+        locate(0, MENU_Y_40_80 - 1);
+
+        //printf("*******************\n");
+        for (int i =0; i < 9; i++)
+        { 
+            //printf("%s\n", topicStrings[i]); 
+            hd_bar(i + MENU_Y_40_80, FG_BLACK, BG_GREEN, (char *)topicStrings[i]);
+        }
+        //printf("*******************\n");
+
+        //locate(0, 23);
+        //printf("SELECT WITH ARROWS, THEN ENTER.");
+        hd_bar(23, FG_BLACK, BG_GREEN, "SELECT WITH ARROWS, THEN ENTER.");
+    }
 
     return TOPICS_MENU;
 }
@@ -80,11 +106,19 @@ TopicState topics_menu()
 {
     if (topicChanged)
     {
-        topicChanged=0;
-        bar(selectedTopic+MENU_Y);
+        topicChanged = 0;
+        if (textMode == 32)
+        {
+            bar(selectedTopic + MENU_Y_32);
+        }
+        else
+        {
+            hd_bar(selectedTopic + MENU_Y_40_80, FG_GREEN, BG_BLUE, topicStrings[selectedTopic]);
+            //underline(selectedTopic + MENU_Y_40_80, topicStrings[selectedTopic], true);
+        }
     }
-    
-    switch(waitkey(true))
+
+    switch(waitkey(false))
     {
     case ARROW_UP:
         return TOPICS_UP;
@@ -101,11 +135,20 @@ TopicState topics_up()
 {
     if (selectedTopic > TOP_STORIES)
     {
-        bar(selectedTopic+MENU_Y);
+        if (textMode == 32)
+        {
+            bar(selectedTopic + MENU_Y_32);
+        }
+        else
+        {
+            hd_bar(selectedTopic + MENU_Y_40_80, FG_BLACK, BG_GREEN, topicStrings[selectedTopic]);
+            //underline(selectedTopic + MENU_Y_40_80, topicStrings[selectedTopic], false);
+        }
+
         selectedTopic--;
-        topicChanged=1;
+        topicChanged = 1;
     }
-    
+
     return TOPICS_MENU;
 }
 
@@ -113,7 +156,16 @@ TopicState topics_down()
 {
     if (selectedTopic < SPORTS)
     {
-        bar(selectedTopic+MENU_Y);
+        if (textMode == 32)
+        {
+            bar(selectedTopic + MENU_Y_32);
+        }
+        else
+        {
+            hd_bar(selectedTopic + MENU_Y_40_80, FG_BLACK, BG_GREEN, topicStrings[selectedTopic]);
+            //underline(selectedTopic + MENU_Y_40_80, topicStrings[selectedTopic], false);
+        }
+
         selectedTopic++;
         topicChanged=1;
     }

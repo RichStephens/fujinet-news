@@ -18,10 +18,19 @@ void halt(void)
     while(1);
 }
 
+void init(void)
+{
+    initCoCoSupport();
+    textMode = getTextMode();
+    rgb();
+}
+
 int main(void)
 {
+    init();
     screen(0,1);
-    
+    cls(1);
+   
     while(1)
     {
         switch(state)
@@ -46,5 +55,6 @@ int main(void)
             break;
     }
 
+    cls(1);
     return 0;
 }
