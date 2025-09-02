@@ -31,7 +31,7 @@ int article_page=1;
 /**
  * @brief Article Page buffer 
  */
-char article_page_buffer[1536];
+char article_page_buffer[2048];
 
 /**
  * @brief Article metadata
@@ -181,11 +181,13 @@ ArticleState article_display(void)
 
         if (textMode == 40)
         {
-            printf("%-120s\n", articles_display_headline(title));
+            multiline_hd_bar(0, FG_WHITE, BG_BLUE, 3, articles_display_headline(title));
+            printf("\n\n");
         }
         else
         {
-            printf("%-160s\n", articles_display_headline(title));
+            multiline_hd_bar(0, FG_WHITE, BG_BLUE, 2, articles_display_headline(title));
+            printf("\n\n");
         }
         printf("%s", pageData);
     }
@@ -240,11 +242,11 @@ ArticleState article_menu(void)
     {
         if (textMode == 40)
         {
-            printf("%s", format_menu_line(page, "<UP/DN> <I>NFO <BREAK> Articles", textMode));
+            print_lowercase_as_reverse(format_menu_line(page, "up/dn iNFO  break ARTICLES", textMode));
         }
         else
         {
-            printf("%s", format_menu_line(page, "<UP/DOWN> <I>NFO <BREAK> Articles", textMode));
+            print_lowercase_as_reverse(format_menu_line(page, "up/down iNFO break ARTICLES", textMode));
         }
     }
 
@@ -320,13 +322,15 @@ ArticleState article_info(void)
 
         if (textMode == 40)
         {
-            printf("%-120s\n\n", articles_display_headline(title));
+            multiline_hd_bar(0, FG_WHITE, BG_BLUE, 3, articles_display_headline(title));
+            locate (0, 5);
             printf("%13s%s\n", "Date:", date);
             printf("%13s%s", "Source:", source);
         }
         else
         {
-            printf("%-160s\n\n", articles_display_headline(title));
+            multiline_hd_bar(0, FG_WHITE, BG_BLUE, 2, articles_display_headline(title));
+            locate(0,4);
             printf("%33s%s\n", "Date:", date);
             printf("%33s%s", "Source:", source);
         }
@@ -337,12 +341,10 @@ ArticleState article_info(void)
         if (textMode == 40)
         {
             printf("      <Press any key to continue>");
-
         }
         else
         {
             printf("                            <Press any key to continue>");
-
         }
     }
 

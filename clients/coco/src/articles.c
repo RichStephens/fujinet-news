@@ -360,20 +360,18 @@ ArticlesState articles_display(void)
         }
         else
         {
-            hd_bar(menu_line - 1, FG_BLACK, BG_GREEN, format_topic_line(page, topic_titles[selectedTopic], textMode));
+            hd_bar(menu_line - 1, FG_WHITE, BG_BLUE, format_topic_line(page, topic_titles[selectedTopic], textMode));
          
-            if (textMode == 40)
-            {
-                locate(0, headline_locations_40[article_cursor_pos] - 1);
+            if (textMode==40)
+            {      
+                multiline_hd_bar(headline_locations_40[article_cursor_pos], FG_WHITE, BG_BLUE, 3,
+                    _articles[article_cursor_pos].headline);
             }
             else
             {
-                locate(0, headline_locations_80[article_cursor_pos] - 1);
+                multiline_hd_bar(headline_locations_80[article_cursor_pos], FG_WHITE, BG_BLUE, 2,
+                    _articles[article_cursor_pos].headline);
             }
-
-            memset(indicator_buffer, '*', textMode - 20);
-            indicator_buffer[textMode - 20] = '\0';
-            printf("%s", indicator_buffer);
         }
     }
 
@@ -400,29 +398,25 @@ void articles_bar(void)
         {
             if (textMode==40)
             {
-                locate(0, headline_locations_40[article_cursor_pos_prev]-1);        
+                multiline_hd_bar(headline_locations_40[article_cursor_pos_prev], FG_BLACK, BG_GREEN, 3,
+                    _articles[article_cursor_pos_prev].headline);
             }
             else
             {
-                locate(0, headline_locations_80[article_cursor_pos_prev]-1);
+                multiline_hd_bar(headline_locations_80[article_cursor_pos_prev], FG_BLACK, BG_GREEN, 2,
+                    _articles[article_cursor_pos_prev].headline);
             }
-
-            memset(indicator_buffer, ' ', textMode - 20);
-            indicator_buffer[textMode - 20] = '\0';
-            printf("%s", indicator_buffer);
 
             if (textMode==40)
             {
-                locate(0, headline_locations_40[article_cursor_pos]-1);        
+                multiline_hd_bar(headline_locations_40[article_cursor_pos], FG_WHITE, BG_BLUE, 3,
+                    _articles[article_cursor_pos].headline);
             }
             else
             {
-                locate(0, headline_locations_80[article_cursor_pos]-1);
+                multiline_hd_bar(headline_locations_80[article_cursor_pos], FG_WHITE, BG_BLUE, 2,
+                    _articles[article_cursor_pos].headline);
             }
-
-            memset(indicator_buffer, '*', textMode - 20);
-            indicator_buffer[textMode - 20] = '\0';
-            printf("%s", indicator_buffer);
         }   
         article_cursor_pos_prev = article_cursor_pos;
     }
@@ -442,19 +436,18 @@ ArticlesState articles_menu(void)
     }
     else if (textMode == 40)
     {
-        printf(" <UP/DN> CHOOSE  <BREAK> TOPICS\n");
-        printf(" <LF/RT> PAGE <ENTER> VIEW <G>O TO PAGE");
+        print_lowercase_as_reverse("  up/dn  CHOOSE   break  TOPICS\n");
+        print_lowercase_as_reverse("  lf/rt  PAGE  enter  VIEW  gO TO PAGE");
     }
     else
     { 
         // Centered on 80 character screen
-        printf("                        <UP/DOWN> CHOOSE  <BREAK> TOPICS\n");
-        printf("                     <LEFT/RIGHT> PAGE    <ENTER> VIEW <G>O TO PAGE");
+        print_lowercase_as_reverse("                         up/down  CHOOSE   break  TOPICS\n");
+        print_lowercase_as_reverse("                      left/right  PAGE     enter  VIEW  gO TO PAGE");
     }
     
     articles_bar();
     locate(textMode - 1, menu_line + 1);
-    putchar(article_cursor_pos);
 
     switch (waitkey(false))
     {
