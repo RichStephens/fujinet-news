@@ -75,27 +75,20 @@ TopicState topics_display(void)
         locate(0, 0);
         if (textMode == 40)
         {
-            hd_bar(0, FG_BLACK, BG_GREEN, "          FUJINET  NEWS TOPICS");
-            //printf("********* FUJINET  NEWS TOPICS *********");
+            hd_bar(0, FG_WHITE, BG_BLUE, "          FUJINET  NEWS TOPICS");
         }
         else
         {
-            hd_bar(0, FG_BLACK, BG_GREEN, "                              FUJINET  NEWS TOPICS");
-            //printf("***************************** FUJINET  NEWS TOPICS *****************************");
+            hd_bar(0, FG_WHITE, BG_BLUE, "                              FUJINET  NEWS TOPICS");
         } 
 
         locate(0, MENU_Y_40_80 - 1);
 
-        //printf("*******************\n");
-        for (int i =0; i < 9; i++)
+        for (byte i =0; i < 9; i++)
         { 
-            //printf("%s\n", topicStrings[i]); 
             hd_bar(i + MENU_Y_40_80, FG_BLACK, BG_GREEN, (char *)topicStrings[i]);
         }
-        //printf("*******************\n");
 
-        //locate(0, 23);
-        //printf("SELECT WITH ARROWS, THEN ENTER.");
         hd_bar(23, FG_BLACK, BG_GREEN, "SELECT WITH ARROWS, THEN ENTER.");
     }
 
@@ -110,11 +103,12 @@ TopicState topics_menu()
         if (textMode == 32)
         {
             bar(selectedTopic + MENU_Y_32);
+            locate(15, textMode-1);
         }
         else
         {
-            hd_bar(selectedTopic + MENU_Y_40_80, FG_GREEN, BG_BLUE, topicStrings[selectedTopic]);
-            //underline(selectedTopic + MENU_Y_40_80, topicStrings[selectedTopic], true);
+            hd_bar((byte) selectedTopic + MENU_Y_40_80, FG_WHITE, BG_BLUE, topicStrings[selectedTopic]);
+            locate(23, textMode-1);
         }
     }
 
@@ -138,11 +132,12 @@ TopicState topics_up()
         if (textMode == 32)
         {
             bar(selectedTopic + MENU_Y_32);
+            locate(15, textMode-1);
         }
         else
         {
-            hd_bar(selectedTopic + MENU_Y_40_80, FG_BLACK, BG_GREEN, topicStrings[selectedTopic]);
-            //underline(selectedTopic + MENU_Y_40_80, topicStrings[selectedTopic], false);
+            hd_bar((byte) selectedTopic + MENU_Y_40_80, FG_BLACK, BG_GREEN, topicStrings[selectedTopic]);
+            locate(23, textMode-1);
         }
 
         selectedTopic--;
@@ -159,11 +154,12 @@ TopicState topics_down()
         if (textMode == 32)
         {
             bar(selectedTopic + MENU_Y_32);
+            locate(15, textMode-1);
         }
         else
         {
-            hd_bar(selectedTopic + MENU_Y_40_80, FG_BLACK, BG_GREEN, topicStrings[selectedTopic]);
-            //underline(selectedTopic + MENU_Y_40_80, topicStrings[selectedTopic], false);
+            hd_bar((byte) selectedTopic + MENU_Y_40_80, FG_BLACK, BG_GREEN, topicStrings[selectedTopic]);
+            locate(23, textMode-1);
         }
 
         selectedTopic++;

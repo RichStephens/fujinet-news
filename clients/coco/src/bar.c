@@ -51,9 +51,9 @@ void underline(int y, const char *text, BOOL on)
     printf("%s", text);
 }
 
-void hd_bar(int y, int fgcolor, int bgcolor, const char *text)
+void hd_bar(byte y, int fgcolor, int bgcolor, const char *text)
 {
-    locate(0, (byte) y);
+    locate(0, y);
     attr((byte) fgcolor,(byte) bgcolor, FALSE, FALSE);
     if (textMode == 40)
     {
@@ -63,8 +63,39 @@ void hd_bar(int y, int fgcolor, int bgcolor, const char *text)
     {
         printf("%-79s", text);
     }
-    attr(0,0,FALSE,FALSE);
-    locate(textMode - 1, 23);
+    attr(FG_BLACK, BG_GREEN,FALSE,FALSE);
+}
+
+void multiline_hd_bar(byte y, int fgcolor, int bgcolor, int lines, const char *text)
+{
+    char fmtstr[8];
+
+    locate(0, y);
+    attr((byte) fgcolor,(byte) bgcolor, FALSE, FALSE);
+    sprintf(fmtstr, "%%-%ds", (textMode * lines) - 1);
+    printf(fmtstr, text);
+    attr(FG_BLACK, BG_GREEN,FALSE,FALSE);
+}
+
+void print_lowercase_as_reverse(const char *text)
+{
+    attr(FG_BLACK, BG_GREEN, FALSE,FALSE);
+
+    int len = strlen(text);
+    for (int i = 0; i < len; i++)
+    {
+        if (text[i] >= 'a' && text[i] <= 'z')
+        {
+            attr(FG_WHITE, BG_BLUE, FALSE, FALSE);
+            putchar(text[i] - 32);
+        }
+        else
+        {
+            attr(FG_BLACK, BG_GREEN, FALSE,FALSE);
+            putchar(text[i]);
+        }
+    }
+    attr(FG_BLACK, BG_GREEN, FALSE,FALSE);
 }
 
 /**

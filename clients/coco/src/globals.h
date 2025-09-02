@@ -24,6 +24,7 @@
 
 #define FG_BLACK 0
 #define FG_GREEN 1
+#define FG_WHITE 3
 #define BG_GREEN 0
 #define BG_BLUE 2
 #define BG_RED 4
