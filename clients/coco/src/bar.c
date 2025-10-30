@@ -98,6 +98,32 @@ void print_lowercase_as_reverse(const char *text)
     attr(FG_BLACK, BG_GREEN, FALSE,FALSE);
 }
 
+void print_reverse(const char *text)
+{
+    byte buf_32[33];
+    int len = strlen(text);
+
+    if (textMode == 32)
+    {
+        strcpy((char *) buf_32, text);
+        for (int i; i < len; i++)
+        {
+            buf_32[i] &= 0xBF;
+        }
+        putstr((char *) buf_32, len);
+    }
+    else if (textMode == 42 || textMode == 51)
+    {
+
+    }
+    else // 40 or 80
+    {
+        attr(FG_WHITE, BG_BLUE, FALSE, FALSE);
+        putstr(text, len);
+        attr(FG_BLACK, BG_GREEN, FALSE, FALSE);
+    }
+}
+
 /**
  * @brief draw shadow for color c at vert pos y
  * @param y Vertical position (0-15)

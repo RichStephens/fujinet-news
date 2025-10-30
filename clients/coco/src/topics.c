@@ -11,6 +11,7 @@
 #include "globals.h"
 #include "topics.h"
 #include "bar.h"
+#include "cocotext.h"
 
 #define MENU_Y_32 3
 #define MENU_Y_40_80 8
@@ -39,6 +40,7 @@ TopicState topics_reset(void)
 {
     selectedTopic = TOP_STORIES;
     topicChanged = 1;
+    waitkey(0);
     return TOPICS_DISPLAY;
 }
 
@@ -66,6 +68,9 @@ TopicState topics_display(void)
 
         shadow(0x0C, 0xA0);
 
+        waitkey(0);
+        locate(0, 14);
+        printf("w TO CHANGE SCREEN WIDTH");
         locate(0, 15);
         printf("SELECT WITH ARROWS, THEN ENTER.");
     }
@@ -89,10 +94,22 @@ TopicState topics_display(void)
             hd_bar(i + MENU_Y_40_80, FG_BLACK, BG_GREEN, (char *)topicStrings[i]);
         }
 
+        locate(0, 22);
+        print_lowercase_as_reverse("w TO CHANGE SCREEN WIDTH");
         hd_bar(23, FG_BLACK, BG_GREEN, "SELECT WITH ARROWS, THEN ENTER.");
     }
 
     return TOPICS_MENU;
+}
+
+void select_screen_width(void)
+{
+    byte width_return = text_width_menu();
+
+    if (width_return != WIDTH_CANCEL)
+    {
+        set_text_width(width_return);
+    }
 }
 
 TopicState topics_menu()
@@ -122,6 +139,10 @@ TopicState topics_menu()
         return TOPICS_SELECT;
     case BREAK:
         return TOPICS_EXIT;
+    case 'W':
+    case 'w':
+        select_screen_width();
+        return TOPICS_RESET;   
     }       
 }
 

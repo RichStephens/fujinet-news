@@ -27,15 +27,22 @@ void init(void)
 
 int main(void)
 {
-    init();
     screen(0,1);
     cls(1);
-   
+    printf("Calling init...");
+    waitkey(0);
+    init();
+    printf("Setting screen and clearing..");
+    waitkey(0);
+    screen(0,1);
+    cls(1);
     while(1)
     {
         switch(state)
         {
         case TOPICS:
+            printf("Calling topics()");
+            waitkey(0);
             state=topics();
             break;
         case ARTICLES:

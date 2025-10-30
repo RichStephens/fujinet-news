@@ -3,5 +3,11 @@
 *.opt
 *.dat
 *.ved
+*.o
+*.bin
+*.dsk
 .vscode/settings.json
 .vscode/c_cpp_properties.json
+clients/_libs
+clients/_libs/**
+.gitignore
