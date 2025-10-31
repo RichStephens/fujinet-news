@@ -13,11 +13,7 @@
 #include "globals.h"
 #include "article.h"
 #include "bar.h"
-
-/**
- * @brief Temp space for strupr(s) output, so original strings doesn't get changed.
- */
-char uppercase_tmp[1536]; 
+#include "cocotext.h"
 
 /**
  * @brief the currently selected article ID 
@@ -53,7 +49,7 @@ static ArticleState articleState;
 /**
  * @brief the Article URL
  */
-static char article_url[256];
+static char article_url[128];
 
 static char menu_line_buffer[81];
 
@@ -75,17 +71,6 @@ ArticleState article_reset(void)
     }
 
     return ARTICLE_FETCH;
-}
-
-/**
- * @brief Return uppercase string without modifying original
- */
-char *screen_upper(char *s)
-{
-    memset(uppercase_tmp,0,sizeof(uppercase_tmp));
-    strcpy(uppercase_tmp,s);
-
-    return strupr(uppercase_tmp);
 }
 
 /**
@@ -256,7 +241,7 @@ ArticleState article_menu(void)
 
     locate(textMode -1,menu_line);
 
-    switch(waitkey(1))
+    switch(waitkey(0))
     {
     case BREAK:
         return ARTICLE_EXIT;
@@ -338,7 +323,6 @@ ArticleState article_info(void)
             printf("%33s%s\n", "Date:", date);
             printf("%33s%s", "Source:", source);
         }
-
 
         locate(0, menu_line);
 

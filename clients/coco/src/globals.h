@@ -43,7 +43,6 @@ typedef enum _state
     ARTICLES,
     ARTICLE,
     BYE,
-    HALT
 } State;
 
 /**
@@ -67,7 +66,7 @@ extern const char *urlBase;
 extern const char *delim;
 
 /**
- * @brief The text mode - 32, 40, or 80
+ * @brief The text mode - 32, 42, 51, 40, or 80
  */
 extern unsigned char textMode;
 

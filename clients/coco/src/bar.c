@@ -9,10 +9,10 @@
 #include <cmoc.h>
 #include <coco.h>
 #include "bar.h"
+#include "cocotext.h"
 #include "globals.h"
 
-#define SCREEN_RAM_TOP_32 0x0400
-#define SCREEN_RAM_TOP_40_80 0x6C000
+
 /**
  * @brief toggle bar for Y position (0-15) 
  * @param y vertical position (0-15) 
@@ -36,19 +36,6 @@ void bar(int y)
             sp++;
         }
     }
-}
-
-/**
- * @brief Draw text with underline on/off at line y
- * @param y Vertical position (0-23)
- * @param text The text to print
- * @param on Underline on/off 
- */
-void underline(int y, const char *text, BOOL on)
-{
-    locate(0, (byte) y);
-    attr(0,0, FALSE, on);
-    printf("%s", text);
 }
 
 void hd_bar(byte y, int fgcolor, int bgcolor, const char *text)
@@ -75,53 +62,6 @@ void multiline_hd_bar(byte y, int fgcolor, int bgcolor, int lines, const char *t
     sprintf(fmtstr, "%%-%ds", (textMode * lines) - 1);
     printf(fmtstr, text);
     attr(FG_BLACK, BG_GREEN,FALSE,FALSE);
-}
-
-void print_lowercase_as_reverse(const char *text)
-{
-    attr(FG_BLACK, BG_GREEN, FALSE,FALSE);
-
-    int len = strlen(text);
-    for (int i = 0; i < len; i++)
-    {
-        if (text[i] >= 'a' && text[i] <= 'z')
-        {
-            attr(FG_WHITE, BG_BLUE, FALSE, FALSE);
-            putchar(text[i] - 32);
-        }
-        else
-        {
-            attr(FG_BLACK, BG_GREEN, FALSE,FALSE);
-            putchar(text[i]);
-        }
-    }
-    attr(FG_BLACK, BG_GREEN, FALSE,FALSE);
-}
-
-void print_reverse(const char *text)
-{
-    byte buf_32[33];
-    int len = strlen(text);
-
-    if (textMode == 32)
-    {
-        strcpy((char *) buf_32, text);
-        for (int i; i < len; i++)
-        {
-            buf_32[i] &= 0xBF;
-        }
-        putstr((char *) buf_32, len);
-    }
-    else if (textMode == 42 || textMode == 51)
-    {
-
-    }
-    else // 40 or 80
-    {
-        attr(FG_WHITE, BG_BLUE, FALSE, FALSE);
-        putstr(text, len);
-        attr(FG_BLACK, BG_GREEN, FALSE, FALSE);
-    }
 }
 
 /**

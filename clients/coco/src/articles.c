@@ -13,6 +13,7 @@
 #include "globals.h"
 #include "articles.h"
 #include "bar.h"
+#include "cocotext.h"
 
 #define ARTICLES_PER_PAGE 3
 #define MAX_ARTICLES_PER_PAGE 6
@@ -179,7 +180,7 @@ ArticlesState articles_fetch(void)
         }
     }
 
-    network_close(0);
+    network_close(url);
 
     return ARTICLES_DISPLAY;
 }

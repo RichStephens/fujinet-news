@@ -5,9 +5,11 @@
 
 #define WIDTH_CANCEL 999
 
-void hirestxt_init(byte screen_width);
-void hirestxt_exit(void);
 byte text_width_menu(void);
 void set_text_width(byte screen_width);
-bool in_hires_mode();
+char *screen_upper(char *s);
+void reverse(bool onoff);
+void print_lowercase_as_reverse(const char *text);
+void print_reverse(byte x, byte y, const char *text);
+
 #endif

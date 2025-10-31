@@ -11,7 +11,6 @@ CC = cmoc
 
 # Include external makefiles
 include ../makefiles/fujinet-lib.mk
-include ../makefiles/hirestxt-mod-lib.mk
 
 # Default tasks (from included makefiles)
 # If the included files define ALL_TASKS, we’ll add them to the default target.
@@ -35,7 +34,7 @@ INC_FLAGS := $(addprefix -I,$(INC_DIRS))
 all: $(ALL_TASKS) $(BUILD_DIR)/$(TARGET_EXEC)
 
 $(BUILD_DIR)/$(TARGET_EXEC): $(OBJS)
-	$(CC) $(OUTFLAGS) $(OBJS) $(LDFLAGS) $(LIBFLAGS)
+	$(CC) $(ORGFLAGS) $(OUTFLAGS) $(OBJS) $(LDFLAGS) $(LIBFLAGS)
 	$(RM) $(TARGET_EXEC)
 	decb dskini $(TARGET_EXEC).dsk
 	writecocofile $(TARGET_EXEC).dsk $(TARGET_EXEC).bin
