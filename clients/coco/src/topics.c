@@ -11,6 +11,7 @@
 #include "globals.h"
 #include "topics.h"
 #include "bar.h"
+#include "cocotext.h"
 
 #define MENU_Y_32 3
 #define MENU_Y_40_80 8
@@ -66,6 +67,11 @@ TopicState topics_display(void)
 
         shadow(0x0C, 0xA0);
 
+        if (isCoCo3)
+        {
+            locate(0, 14);
+            print_lowercase_as_reverse("w TO CHANGE SCREEN WIDTH");
+        }
         locate(0, 15);
         printf("SELECT WITH ARROWS, THEN ENTER.");
     }
@@ -73,14 +79,15 @@ TopicState topics_display(void)
     {
         cls(1);
         locate(0, 0);
-        if (textMode == 40)
+        switch (textMode)
         {
+        case 40:
             hd_bar(0, FG_WHITE, BG_BLUE, "          FUJINET  NEWS TOPICS");
-        }
-        else
-        {
+            break;
+        case 80:
             hd_bar(0, FG_WHITE, BG_BLUE, "                              FUJINET  NEWS TOPICS");
-        } 
+            break;
+        }
 
         locate(0, MENU_Y_40_80 - 1);
 
@@ -89,10 +96,25 @@ TopicState topics_display(void)
             hd_bar(i + MENU_Y_40_80, FG_BLACK, BG_GREEN, (char *)topicStrings[i]);
         }
 
+        if (isCoCo3)
+        {
+            locate(0, 22);
+            print_lowercase_as_reverse("w TO CHANGE SCREEN WIDTH");
+        }
         hd_bar(23, FG_BLACK, BG_GREEN, "SELECT WITH ARROWS, THEN ENTER.");
     }
 
     return TOPICS_MENU;
+}
+
+void select_screen_width(void)
+{
+    byte width_return = text_width_menu();
+
+    if (width_return != WIDTH_CANCEL && width_return != textMode)
+    {
+        set_text_width(width_return);
+    }
 }
 
 TopicState topics_menu()
@@ -112,17 +134,27 @@ TopicState topics_menu()
         }
     }
 
-    switch(waitkey(false))
+    while (true)
     {
-    case ARROW_UP:
-        return TOPICS_UP;
-    case ARROW_DOWN:
-        return TOPICS_DOWN;
-    case ENTER:
-        return TOPICS_SELECT;
-    case BREAK:
-        return TOPICS_EXIT;
-    }       
+        switch (waitkey(false))
+        {
+        case ARROW_UP:
+            return TOPICS_UP;
+        case ARROW_DOWN:
+            return TOPICS_DOWN;
+        case ENTER:
+            return TOPICS_SELECT;
+        case BREAK:
+            return TOPICS_EXIT;
+        case 'W':
+        case 'w':
+            if (isCoCo3)
+            {
+                select_screen_width();
+                return TOPICS_RESET;
+            }
+        }
+    }
 }
 
 TopicState topics_up()

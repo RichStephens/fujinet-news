@@ -8,10 +8,12 @@
 
 #include <cmoc.h>
 #include <coco.h>
+#include "fujinet-fuji.h"
+#include "fujinet-network.h"
 #include "globals.h"
 #include "articles.h"
-#include "net.h"
 #include "bar.h"
+#include "cocotext.h"
 
 #define ARTICLES_PER_PAGE 3
 #define MAX_ARTICLES_PER_PAGE 6
@@ -125,7 +127,9 @@ ArticlesState articles_reset(void)
 ArticlesState articles_fetch(void)
 {
     char url[256];
-    NetworkStatus ns;
+    uint16_t bytesWaiting;
+    uint8_t connected;
+    uint8_t error;
 
     memset(articles_buffer,0,sizeof(articles_buffer));
 
@@ -153,13 +157,14 @@ ArticlesState articles_fetch(void)
             articles_page,
             category_name_to_num(selectedTopic));
     
-    net_open(0,12,0,url);
-    net_status(0,&ns);
+    network_open(url, OPEN_MODE_RW, OPEN_TRANS_NONE);
+    network_status(url, &bytesWaiting, (uint8_t *) &connected, &error);
     unsigned int buf_offset = 0;
-    while(ns.error == 1 && ns.bytesWaiting > 0)
-    {   net_read(0,(byte *)&articles_buffer[0+buf_offset],ns.bytesWaiting);
-        buf_offset += ns.bytesWaiting;
-        net_status(0, &ns);
+    while(error == 1 && bytesWaiting > 0)
+    {   
+        network_read(url, (byte *)&articles_buffer[0+buf_offset], bytesWaiting);
+        buf_offset += bytesWaiting;
+        network_status(url, &bytesWaiting, (uint8_t *) &connected, &error);
         
         strcat(fetching_buf, ".");
 
@@ -175,7 +180,7 @@ ArticlesState articles_fetch(void)
         }
     }
 
-    net_close(0);
+    network_close(url);
 
     return ARTICLES_DISPLAY;
 }

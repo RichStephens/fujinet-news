@@ -8,15 +8,12 @@
 
 #include <cmoc.h>
 #include <coco.h>
+#include "fujinet-fuji.h"
+#include "fujinet-network.h"
 #include "globals.h"
 #include "article.h"
-#include "net.h"
 #include "bar.h"
-
-/**
- * @brief Temp space for strupr(s) output, so original strings doesn't get changed.
- */
-char uppercase_tmp[1536]; 
+#include "cocotext.h"
 
 /**
  * @brief the currently selected article ID 
@@ -52,7 +49,7 @@ static ArticleState articleState;
 /**
  * @brief the Article URL
  */
-static char article_url[256];
+static char article_url[128];
 
 static char menu_line_buffer[81];
 
@@ -77,24 +74,15 @@ ArticleState article_reset(void)
 }
 
 /**
- * @brief Return uppercase string without modifying original
- */
-char *screen_upper(char *s)
-{
-    memset(uppercase_tmp,0,sizeof(uppercase_tmp));
-    strcpy(uppercase_tmp,s);
-
-    return strupr(uppercase_tmp);
-}
-
-/**
  * @brief Fetch current article page
  */
 ArticleState article_fetch(void)
 {
-    NetworkStatus ns;
     char *p = NULL;
     char tmp[8];
+    uint16_t bytesWaiting;
+    uint8_t connected;
+    uint8_t error;
     
     memset(article_url,0,sizeof(article_url));
     memset(article_page_buffer,0,sizeof(article_page_buffer));
@@ -121,13 +109,14 @@ ArticleState article_fetch(void)
             article_page,
             article_id);
 
-    net_open(0,12,0,article_url);
-    net_status(0,&ns);
+    network_open(article_url, OPEN_MODE_RW, OPEN_TRANS_NONE);
+    network_status(article_url, &bytesWaiting, (uint8_t *) &connected, &error);
     unsigned int buf_offset = 0;
-    while(ns.error == 1 && ns.bytesWaiting > 0)
-    {   net_read(0,(byte *)&article_page_buffer[0+buf_offset],ns.bytesWaiting);
-        buf_offset += ns.bytesWaiting;
-        net_status(0, &ns);
+    while(error == 1 && bytesWaiting > 0)
+    {   
+        network_read(article_url, (byte *)&article_page_buffer[0+buf_offset], bytesWaiting);
+        buf_offset += bytesWaiting;
+        network_status(article_url, &bytesWaiting, (uint8_t *) &connected, &error);
         
         strcat(fetching_buf, ".");
 
@@ -142,7 +131,7 @@ ArticleState article_fetch(void)
             hd_bar(0, FG_BLACK, BG_GREEN, fetching_buf);
         }
     }
-    net_close(0);
+    network_close(article_url);
 
     title = strtok(article_page_buffer,"\n");
     date = strtok(NULL,"\n");
@@ -252,7 +241,7 @@ ArticleState article_menu(void)
 
     locate(textMode -1,menu_line);
 
-    switch(waitkey(1))
+    switch(waitkey(0))
     {
     case BREAK:
         return ARTICLE_EXIT;
@@ -334,7 +323,6 @@ ArticleState article_info(void)
             printf("%33s%s\n", "Date:", date);
             printf("%33s%s", "Source:", source);
         }
-
 
         locate(0, menu_line);
 

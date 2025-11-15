@@ -13,11 +13,6 @@
 #include "articles.h"
 #include "article.h"
 
-void halt(void)
-{
-    while(1);
-}
-
 void init(void)
 {
     initCoCoSupport();
@@ -30,7 +25,7 @@ int main(void)
     init();
     screen(0,1);
     cls(1);
-   
+
     while(1)
     {
         switch(state)
@@ -43,9 +38,6 @@ int main(void)
             break;
         case ARTICLE:
             state=article();
-            break;
-        case HALT:
-            halt();
             break;
         case BYE:
             break;
