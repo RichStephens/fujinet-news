@@ -14,21 +14,12 @@
 #include "article.h"
 #include "bar.h"
 #include "cocotext.h"
-
-/**
- * @brief the currently selected article ID 
- */
-long article_id;
-
-/**
- * @brief current article page
- */
-int article_page=1;
+#include "network.h"
 
 /**
  * @brief Article Page buffer 
  */
-char article_page_buffer[2048];
+static char *article_page_buffer;
 
 /**
  * @brief Article metadata
@@ -46,14 +37,9 @@ static byte menu_line = 15; // line for menu display
  */
 static ArticleState articleState;
 
-/**
- * @brief the Article URL
- */
-static char article_url[128];
-
 static char menu_line_buffer[81];
 
-extern char *articles_display_headline(char *s);
+char *articles_display_headline(char *s);
 
 /**
  * @brief Initial entrypoint, reset local state
@@ -64,10 +50,12 @@ ArticleState article_reset(void)
     if (textMode == 32)
     {
         menu_line = 15;
+        rows = 10;
     }
     else
     {
         menu_line = 22;
+        rows = 17;
     }
 
     return ARTICLE_FETCH;
@@ -80,58 +68,13 @@ ArticleState article_fetch(void)
 {
     char *p = NULL;
     char tmp[8];
-    uint16_t bytesWaiting;
-    uint8_t connected;
-    uint8_t error;
-    
-    memset(article_url,0,sizeof(article_url));
-    memset(article_page_buffer,0,sizeof(article_page_buffer));
 
-    char fetching_buf[81] = "FETCHING PAGE, PLEASE WAIT.";
 
-    if (textMode == 32)
-    {
-        cls(3);
-        printf("%s", fetching_buf);
-    }
-    else
-    {
-        cls(1);
-        hd_bar(0, FG_BLACK, BG_GREEN, fetching_buf);
-    }
+    strcpy(fetching_buf, "FETCHING PAGE, PLEASE WAIT.");
 
-    int rows = (textMode == 32) ? 10 : 17;
+    show_fetching_msg(true, false);
 
-    sprintf(article_url,"%s?t=lf&ps=%dx%d&p=%u&a=%lu",
-            urlBase,
-            textMode - 1,
-            rows,
-            article_page,
-            article_id);
-
-    network_open(article_url, OPEN_MODE_RW, OPEN_TRANS_NONE);
-    network_status(article_url, &bytesWaiting, (uint8_t *) &connected, &error);
-    unsigned int buf_offset = 0;
-    while(error == 1 && bytesWaiting > 0)
-    {   
-        network_read(article_url, (byte *)&article_page_buffer[0+buf_offset], bytesWaiting);
-        buf_offset += bytesWaiting;
-        network_status(article_url, &bytesWaiting, (uint8_t *) &connected, &error);
-        
-        strcat(fetching_buf, ".");
-
-        if (textMode == 32)
-        {
-            locate(0,0);
-            printf("%s", fetching_buf);
-        }
-        else
-        {
-            cls(1);
-            hd_bar(0, FG_BLACK, BG_GREEN, fetching_buf);
-        }
-    }
-    network_close(article_url);
+    article_page_buffer = fetch_data(false);
 
     title = strtok(article_page_buffer,"\n");
     date = strtok(NULL,"\n");
@@ -155,7 +98,7 @@ ArticleState article_display(void)
 {
     if (textMode == 32)
     {
-        cls(3);
+        clear_screen(3);
         printf("%-96s\n", articles_display_headline(title));
         bar(0);
         bar(1);
@@ -166,16 +109,16 @@ ArticleState article_display(void)
     }
     else
     {
-        cls(1);
+        clear_screen(1);
 
-        if (textMode == 40)
+        if (textMode == 40 || textMode == 41)
         {
-            multiline_hd_bar(0, FG_WHITE, BG_BLUE, 3, articles_display_headline(title));
+            multiline_hd_bar(0, 3, articles_display_headline(title), true);
             printf("\n\n");
         }
         else
         {
-            multiline_hd_bar(0, FG_WHITE, BG_BLUE, 2, articles_display_headline(title));
+            multiline_hd_bar(0, 2, articles_display_headline(title), true);
             printf("\n\n");
         }
         printf("%s", pageData);
@@ -219,27 +162,26 @@ char *format_menu_line(const char *page, const char *menu_text, int width)
  */
 ArticleState article_menu(void)
 {
-    locate(0, menu_line);
-
     if (textMode == 32)
     {
+        gotoxy(0, menu_line);
         printf("      up/dn iNFO break ARTICLES");
-        locate(0, menu_line);
+        gotoxy(0, menu_line);
         printf("%s", page);
     }
     else
     {
-        if (textMode == 40)
+        if (textMode == 40 || textMode == 41)
         {
-            print_lowercase_as_reverse(format_menu_line(page, "up/dn iNFO  break ARTICLES", textMode));
+            print_reverse(0, menu_line, format_menu_line(page, "up/dn iNFO  break ARTICLES", textMode), true);
         }
         else
         {
-            print_lowercase_as_reverse(format_menu_line(page, "up/down iNFO break ARTICLES", textMode));
+            print_reverse(0, menu_line, format_menu_line(page, "up/down iNFO break ARTICLES", textMode), true);
         }
     }
 
-    locate(textMode -1,menu_line);
+    gotoxy(textMode -1,menu_line);
 
     switch(waitkey(0))
     {
@@ -290,43 +232,43 @@ ArticleState article_info(void)
 {
     if (textMode == 32)
     {
-        cls(6);
+        clear_screen(6);
         printf("%-96s", articles_display_headline(title));
         bar(0);
         bar(1);
         bar(2);
         shadow(3, 0xD0);
 
-        locate(0, 4);
+        gotoxy(0, 4);
         printf("%10s%-22s", "date:", screen_upper(date));
         printf("%10s%-22s", "source:", screen_upper(source));
         
         shadow(6,0xD0);
-        locate(0, menu_line);
+        gotoxy(0, menu_line);
         printf("    PRESS ANY KEY TO CONTINUE");
     }
     else
     {
-        cls(1);
+        clear_screen(1);
 
-        if (textMode == 40)
+        if (textMode == 40 || textMode == 41)
         {
-            multiline_hd_bar(0, FG_WHITE, BG_BLUE, 3, articles_display_headline(title));
-            locate (0, 5);
+            multiline_hd_bar(0, 3, articles_display_headline(title), true);
+            gotoxy (0, 5);
             printf("%13s%s\n", "Date:", date);
             printf("%13s%s", "Source:", source);
         }
         else
         {
-            multiline_hd_bar(0, FG_WHITE, BG_BLUE, 2, articles_display_headline(title));
-            locate(0,4);
+            multiline_hd_bar(0, 2, articles_display_headline(title), true);
+            gotoxy(0,4);
             printf("%33s%s\n", "Date:", date);
             printf("%33s%s", "Source:", source);
         }
 
-        locate(0, menu_line);
+        gotoxy(0, menu_line);
 
-        if (textMode == 40)
+        if (textMode == 40 || textMode == 41)
         {
             printf("      <Press any key to continue>");
         }

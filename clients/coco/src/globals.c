@@ -13,11 +13,45 @@
  */
 State state;
 
-const char *urlBase = "N:HTTPS://FUJINET.ONLINE/8bitnews/news.php";
-
-const char *delim = "|";
-
+/**
+ * @brief Current text mode
+*/
 unsigned char textMode = 32;
+
+/**
+ * @brief Current articles page
+ */
+int articles_page;
+
+/**
+ * @brief Number of articles per page
+ */
+int articles_per_page;
+
+/**
+ * @brief the currently selected article ID 
+ */
+long article_id;
+
+/**
+ * @brief current article page
+ */
+int article_page;
+
+/**
+ * @brief Buffer for fetching status display
+ */
+char fetching_buf[81];
+
+/**
+ * @brief Number of rows of text to fetch
+ */
+int rows;
+
+/**
+ * @brief Currently selected topic
+ */
+const char *topic;
 
 const char *topicStrings[] = {
     " Top Stories",

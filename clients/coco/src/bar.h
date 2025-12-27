@@ -11,6 +11,7 @@
 
 #include <cmoc.h>
 #include <coco.h>
+#include "fujinet-fuji.h"
 
 #define SCREEN_RAM_TOP_32 0x0400
 
@@ -21,36 +22,23 @@
 void bar(int y);
 
 /**
- * @brief Draw a line of text across the screen with fg/bg colors
+ * @brief Draw a line of text across the screen 
  * @param y Vertical position (0-23)
  * @param fgcolor The foreground color
  * @param bgcolor The background color
  * @param text The text to print 
+ * @param rev Whether to reverse the text
  */
-void hd_bar(byte y, int fgcolor, int bgcolor, const char *text);
+void hd_bar(byte y, const char *text, bool rev);
 
 /**
- * @brief Draw a line of text across the screen with fg/bg colors
+ * @brief Draw a multiple lines of text across the screen 
  * @param y Vertical position (0-23)
- * @param fgcolor The foreground color
- * @param bgcolor The background color
  * @param lines The number of consecutive lines to highlight
  * @param text The text to print 
+ * @param rev Whether to reverse the text
  */
-void multiline_hd_bar(byte y, int fgcolor, int bgcolor, int lines, const char *text);
-
-/**
- * @brief Print a line of text with lowercase characters reversed in 40/80 column mode
- *        Assume default colors to be black on green, reverse white on blue
- */
-void print_lowercase_as_reverse(const char *text);
-
-/**
- * @brief Print text as reverse in any mode (32, 40, 80)
- *        Assume default colors in 40/80 mode
- *        to be black on green, reverse white on blue
- */ 
-void print_reverse(byte x, byte y, const char *text);
+void multiline_hd_bar(byte y, int lines, const char *text, bool rev);
 
 /**
  * @brief draw shadow for color c at vert pos y

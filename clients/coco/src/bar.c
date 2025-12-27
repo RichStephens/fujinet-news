@@ -8,9 +8,9 @@
 
 #include <cmoc.h>
 #include <coco.h>
-#include "bar.h"
-#include "cocotext.h"
 #include "globals.h"
+#include "cocotext.h"
+#include "bar.h"
 
 
 /**
@@ -38,31 +38,6 @@ void bar(int y)
     }
 }
 
-void hd_bar(byte y, int fgcolor, int bgcolor, const char *text)
-{
-    locate(0, y);
-    attr((byte) fgcolor,(byte) bgcolor, FALSE, FALSE);
-    if (textMode == 40)
-    {
-        printf("%-39s", text);
-    }
-    else
-    {
-        printf("%-79s", text);
-    }
-    attr(FG_BLACK, BG_GREEN,FALSE,FALSE);
-}
-
-void multiline_hd_bar(byte y, int fgcolor, int bgcolor, int lines, const char *text)
-{
-    char fmtstr[8];
-
-    locate(0, y);
-    attr((byte) fgcolor,(byte) bgcolor, FALSE, FALSE);
-    sprintf(fmtstr, "%%-%ds", (textMode * lines) - 1);
-    printf(fmtstr, text);
-    attr(FG_BLACK, BG_GREEN,FALSE,FALSE);
-}
 
 /**
  * @brief draw shadow for color c at vert pos y
@@ -78,6 +53,49 @@ void shadow(int y, int c)
 
     *sp = (byte)c | 0x0b;
     memset(sp+1,c | 0x03, 31);
+}
+
+void hd_bar(byte y, const char *text, bool rev)  
+{
+    gotoxy(0, y);
+
+    reverse(rev);
+
+    if (textMode == 40 | textMode == 41)
+    {
+        if (hirestxt_mode)
+        {
+            printf("%-41s", text);
+        }
+        else
+        {
+            printf("%-39s", text);
+        }
+    }
+    else
+    {
+        printf("%-79s", text);
+    }
+
+    reverse(false);
+}
+
+void multiline_hd_bar(byte y, int lines, const char *text, bool rev)
+{
+    char fmtstr[8];
+    int modifier = 0;
+    gotoxy(0, y);
+
+    reverse(rev);
+
+    if (!hirestxt_mode)
+    {
+        modifier = 1;
+    }
+
+    printf("%-*s", (textMode * lines) - modifier, text);
+
+    reverse(false);
 }
 
 
