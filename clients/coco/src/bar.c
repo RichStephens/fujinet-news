@@ -88,12 +88,14 @@ void multiline_hd_bar(byte y, int lines, const char *text, bool rev)
 
     reverse(rev);
 
-    if (!hirestxt_mode)
-    {
-        modifier = 1;
-    }
+    printf("%-*s", (textMode * lines), text);
 
-    printf("%-*s", (textMode * lines) - modifier, text);
+    // Kludge I'm not proud of: Reverse or clear those last 3 characters
+    if (hirestxt_mode && lines == 3)
+    {
+        gotoxy(39, y + 2);
+        printf("   ");
+    }
 
     reverse(false);
 }

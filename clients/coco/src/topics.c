@@ -107,7 +107,7 @@ void select_screen_width(void)
 {
     byte width_return = text_width_menu();
 
-    if (width_return != WIDTH_CANCEL && width_return != textMode)
+    if (width_return != WIDTH_CANCEL)
     {
         set_text_width(width_return);
     }

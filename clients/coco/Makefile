@@ -22,7 +22,7 @@ OBJS := $(SRCS:%=$(BUILD_DIR)/%.o)
 DEPS := $(OBJS:.o=.d)
 
 OUTFLAGS = -o$(TARGET_EXEC).bin
-ORGFLAGS = --org=2000 --limit=7C00 
+ORGFLAGS = --org=2200 --limit=7C00 
 
 CFLAGS += -Wno-printf -Wno-const
 

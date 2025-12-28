@@ -191,6 +191,10 @@ ArticleState article_menu(void)
         return ARTICLE_PREV_PAGE;
     case ARROW_DOWN:
         return ARTICLE_NEXT_PAGE;
+    case 'C':
+    case 'c':
+        switch_colorset();
+        return ARTICLE_MENU;
     case 'I':
     case 'i':
         return ARTICLE_INFO;

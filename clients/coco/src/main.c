@@ -53,5 +53,6 @@ int main(void)
 
     hirestxt_close();
     clear_screen(1);
+    coldStart();
     return 0;
 }

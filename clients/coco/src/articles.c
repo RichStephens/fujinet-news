@@ -42,7 +42,7 @@ struct Article _articles[MAX_ARTICLES_PER_PAGE];
 
 const char *category_num_to_name(int c)
 {
-    return screen_lower(strtok(topicStrings[c], " "));
+    return strtok(screen_lower(topicStrings[c]), " ");
 };
 
 const byte headline_locations_32[3] = {1, 5, 9};
@@ -92,12 +92,6 @@ ArticlesState articles_reset(void)
  */
 ArticlesState articles_fetch(void)
 {
-    char url[256];
-    uint16_t bytesWaiting;
-    uint8_t connected;
-    uint8_t error;
-
-
     strcpy(fetching_buf, "FETCHING ARTICLES, PLEASE WAIT.");
 
     topic = category_num_to_name(selectedTopic);
@@ -383,6 +377,7 @@ ArticlesState articles_menu(void)
     
     articles_bar();
     gotoxy(textMode - 1, menu_line + 1);
+
 
     switch (waitkey(false))
     {

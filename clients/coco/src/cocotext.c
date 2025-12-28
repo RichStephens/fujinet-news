@@ -7,7 +7,7 @@
 #include "cocotext.h"
 
 //(byte *)*(byte *)0x00BC << 8 This is where BASIC puts it by default
-#define SCREEN_BUFFER (byte*) 0x800
+#define SCREEN_BUFFER (byte*) 0xA00
 
 /**
  * @brief Temp space for strupr(s) output, so original strings doesn't get changed.

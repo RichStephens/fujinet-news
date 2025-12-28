@@ -4,7 +4,7 @@
 #include "fujinet-fuji.h"
 #include "hirestxt.h"
 
-#define WIDTH_CANCEL 999
+#define WIDTH_CANCEL 99
 
 #define gotox(x) moveCursor(x, getCursorRow())
 
