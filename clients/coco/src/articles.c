@@ -14,24 +14,21 @@
 #include "articles.h"
 #include "bar.h"
 #include "cocotext.h"
+#include "network.h"
 
 #define ARTICLES_PER_PAGE 3
 #define MAX_ARTICLES_PER_PAGE 6
 
 static ArticlesState articlesState = ARTICLES_RESET;
-static int articles_page = 1;
-static char articles_buffer[1024];
+static char *articles_buffer;
 static char outs[161];
 static char topic_line[81];
-static char indicator_buffer[62];
-int articles_per_page = ARTICLES_PER_PAGE;
 byte menu_line = 14;
 static int headline_length = 96;
 static int articles_on_this_page = 0;
 static char page[32];   // enough for "12345/12345" etc.
 static char article_cursor_pos = 0;
 static char article_cursor_pos_prev = 0;
-
 
 extern long article_id;
 
@@ -43,46 +40,13 @@ struct Article {
 
 struct Article _articles[MAX_ARTICLES_PER_PAGE];
 
-static const char *topic_titles[9] =
-    {
-        "TOP STORIES",
-        "WORLD NEWS",
-        "BUSINESS",
-        "SCIENCE",
-        "TECHNOLOGY",
-        "HEALTH",
-        "ENTERTAINMENT",
-        "POLITICS",
-        "SPORTS"
-    };
-
-const char *category_name_to_num(int c)
+const char *category_num_to_name(int c)
 {
-    switch(c)
-    {
-    case 0:
-        return "top";
-    case 1:
-        return "world";
-    case 2:
-        return "business";
-    case 3:
-        return "science";
-    case 4:
-        return "technology";
-    case 5:
-        return "health";
-    case 6:
-        return "entertainment";
-    case 7:
-        return "politics";
-    case 8:
-        return "sports";
-    }
+    return strtok(screen_lower(topicStrings[c]), " ");
 };
 
 const byte headline_locations_32[3] = {1, 5, 9};
-const byte headline_locations_40 [5]= {1, 5, 9, 13, 17};
+const byte headline_locations_40_41 [5]= {1, 5, 9, 13, 17};
 const byte headline_locations_80[6] = {1, 4, 7, 10, 13, 16};
 
 
@@ -97,6 +61,7 @@ ArticlesState articles_reset(void)
 
     if (textMode == 32)
     {
+        rows = 13;
         menu_line = 14;
         articles_per_page = 3;
         headline_length = 96;
@@ -104,7 +69,8 @@ ArticlesState articles_reset(void)
     else
     {
         menu_line = 22;
-        if (textMode==40)
+        rows = 21;
+        if (textMode == 40 || textMode == 41)
         {
             articles_per_page = 5;
             headline_length = 120;
@@ -126,61 +92,13 @@ ArticlesState articles_reset(void)
  */
 ArticlesState articles_fetch(void)
 {
-    char url[256];
-    uint16_t bytesWaiting;
-    uint8_t connected;
-    uint8_t error;
+    strcpy(fetching_buf, "FETCHING ARTICLES, PLEASE WAIT.");
 
-    memset(articles_buffer,0,sizeof(articles_buffer));
+    topic = category_num_to_name(selectedTopic);
 
-    char fetching_buf[81] = "FETCHING ARTICLES, PLEASE WAIT.";
-
-    if (textMode == 32)
-    {
-        cls(2);
-        printf("%s", fetching_buf);
-    }
-    else
-    {
-        cls(1);
-        hd_bar(0, FG_BLACK, BG_GREEN, fetching_buf);
-    }
-
-    int rows = (textMode==32) ? 13 : 21;
+    show_fetching_msg(true, true);
     
-    // Set up URL
-    sprintf(url,"%s?t=lf&ps=%dx%d&l=%u&p=%u&c=%s",
-            urlBase,
-            textMode,
-            rows,
-            articles_per_page,
-            articles_page,
-            category_name_to_num(selectedTopic));
-    
-    network_open(url, OPEN_MODE_RW, OPEN_TRANS_NONE);
-    network_status(url, &bytesWaiting, (uint8_t *) &connected, &error);
-    unsigned int buf_offset = 0;
-    while(error == 1 && bytesWaiting > 0)
-    {   
-        network_read(url, (byte *)&articles_buffer[0+buf_offset], bytesWaiting);
-        buf_offset += bytesWaiting;
-        network_status(url, &bytesWaiting, (uint8_t *) &connected, &error);
-        
-        strcat(fetching_buf, ".");
-
-        if (textMode == 32)
-        {
-            locate(0,0);
-            printf("%s", fetching_buf);
-        }
-        else
-        {
-            cls(1);
-            hd_bar(0, FG_BLACK, BG_GREEN, fetching_buf);
-        }
-    }
-
-    network_close(url);
+    articles_buffer = fetch_data(true);
 
     return ARTICLES_DISPLAY;
 }
@@ -247,60 +165,63 @@ int parse_articles_response(char *input, struct Article *articles, int capacity)
     char *line;
     int article_count;
 
-    // initialize the entire articles array to zero
+    if (!input || !*input || !articles || capacity <= 0)
+        return -1;
+
+    // initialize caller-provided array and page buffer
     memset(articles, 0, capacity * sizeof(struct Article));
     memset(page, 0, sizeof(page));
 
-    if (input == NULL || *input == '\0')
-    {
-        return -1;
-    }
-
     article_count = 0;
-
     line = input;
-    while (line != NULL && *line != '\0')
+
+    while (line && *line)
     {
-        // find the end of the current line
+        // find end of current line
         char *next_line = strchr(line, '\n');
         if (next_line)
         {
-            *next_line = '\0'; // terminate the current line
-            next_line++;       // move to the start of next line
+            *next_line = '\0';   // terminate current line
+            next_line++;         // start of next line
         }
 
+        // skip empty lines
+        if (*line == '\0')
+        {
+            line = next_line;
+            continue;
+        }
+
+        // first non-empty line is the page string (e.g. "1/245")
         if (page[0] == '\0')
         {
-            // first line is the page
-            memset(page, 0, sizeof(page));
             strncpy(page, line, sizeof(page) - 1);
+            page[sizeof(page) - 1] = '\0';
         }
         else
         {
-            if (article_count < capacity && *line != '\0')
+            // parse article lines
+            if (article_count < capacity)
             {
-                // manually split id|timestamp|headline
                 char *first_pipe = strchr(line, '|');
                 if (first_pipe)
                 {
-                    *first_pipe = '\0';
-                    char *id_str = line;
+                    *first_pipe++ = '\0';   // id_str is now line
 
-                    char *second_pipe = strchr(first_pipe + 1, '|');
+                    char *second_pipe = strchr(first_pipe, '|');
                     if (second_pipe)
                     {
-                        *second_pipe = '\0';
-                        char *ts = first_pipe + 1;
-                        char *headline = second_pipe + 1;
+                        *second_pipe++ = '\0'; // ts is first_pipe, headline is second_pipe
 
                         struct Article *a = &articles[article_count];
-                        a->id = strtol(id_str, NULL, 10);
 
-                        memset(a->timestamp, 0, sizeof(a->timestamp));
-                        strncpy(a->timestamp, ts, sizeof(a->timestamp) - 1);
+                        a->id = strtol(line, NULL, 10);
 
-                        memset(a->headline, 0, sizeof(a->headline));
-                        strncpy(a->headline, headline, sizeof(a->headline) - 1);
+                        strncpy(a->timestamp, first_pipe, sizeof(a->timestamp) - 1);
+                        a->timestamp[sizeof(a->timestamp) - 1] = '\0';
+
+                        strncpy(a->headline, second_pipe, sizeof(a->headline) - 1);
+                        a->headline[sizeof(a->headline) - 1] = '\0';
 
                         article_count++;
                     }
@@ -314,14 +235,17 @@ int parse_articles_response(char *input, struct Article *articles, int capacity)
     return article_count;
 }
 
+
 /**
  * @brief Display fetched articles
  */
 ArticlesState articles_display(void)
 {
     int i=0;
+    int w1, w2; 
+    byte y;
 
-    locate(0,0);
+    gotoxy(0,0);
 
     articles_on_this_page = parse_articles_response(articles_buffer, _articles, MAX_ARTICLES_PER_PAGE);
 
@@ -329,34 +253,39 @@ ArticlesState articles_display(void)
     {
         for (int i = 0; i < articles_on_this_page; i++)
         {
-            if (textMode == 32)
+            switch (textMode)
             {
-                locate(0, headline_locations_32[i] - 1);
-                printf("%32s", _articles[i].timestamp);
-                printf("%-96s", articles_display_headline(_articles[i].headline));
+                case 32:
+                    w1 = textMode;
+                    w2 = 96;
+                    y = headline_locations_32[i] - 1;
+                    break;
+                    case 40:
+                    case 41:
+                    w1 = textMode;
+                    w2 = 120;
+                    y = headline_locations_40_41[i] - 1;
+                    break;
+                case 80:
+                    w1 = textMode;
+                    w2 = 160;
+                    y = headline_locations_80[i] - 1;
+                    break;
             }
-            else
-            {
-                if (textMode == 40)
-                {
-                    locate(0, headline_locations_40[i] - 1);
-                    printf("%40s", _articles[i].timestamp);
-                    printf("%-120s", articles_display_headline(_articles[i].headline));
-                }
-                else
-                {
-                    locate(0, headline_locations_80[i] - 1);
-                    printf("%80s", _articles[i].timestamp);
-                    printf("%-160s", articles_display_headline(_articles[i].headline));
-                }
-            }
+
+            gotoxy(0, y);
+            printf("%*s", w1, _articles[i].timestamp);
+            gotoxy(0, y + 1);
+            printf("%-*s", w2, articles_display_headline(_articles[i].headline));
+
         }
 
         if (textMode == 32)
         {
+
             shadow(12, 0x90);
-            locate(0, menu_line - 1);
-            printf("%s", format_topic_line(page, topic_titles[selectedTopic], textMode));
+            gotoxy(0, menu_line - 1);
+            printf("%s", format_topic_line(page, screen_upper(topicStrings[selectedTopic]), textMode));
             bar(13);
 
             bar(headline_locations_32[article_cursor_pos]);
@@ -365,17 +294,17 @@ ArticlesState articles_display(void)
         }
         else
         {
-            hd_bar(menu_line - 1, FG_WHITE, BG_BLUE, format_topic_line(page, topic_titles[selectedTopic], textMode));
+            hd_bar(menu_line - 1, format_topic_line(page, topicStrings[selectedTopic], textMode), true);
          
-            if (textMode==40)
+            if (textMode == 40 || textMode == 41)
             {      
-                multiline_hd_bar(headline_locations_40[article_cursor_pos], FG_WHITE, BG_BLUE, 3,
-                    _articles[article_cursor_pos].headline);
+                multiline_hd_bar(headline_locations_40_41[article_cursor_pos], 3,
+                    _articles[article_cursor_pos].headline, true);
             }
             else
             {
-                multiline_hd_bar(headline_locations_80[article_cursor_pos], FG_WHITE, BG_BLUE, 2,
-                    _articles[article_cursor_pos].headline);
+                multiline_hd_bar(headline_locations_80[article_cursor_pos], 2,
+                    _articles[article_cursor_pos].headline, true);
             }
         }
     }
@@ -401,26 +330,21 @@ void articles_bar(void)
         }
         else
         {
-            if (textMode==40)
+            if (textMode == 40 || textMode == 41)
             {
-                multiline_hd_bar(headline_locations_40[article_cursor_pos_prev], FG_BLACK, BG_GREEN, 3,
-                    _articles[article_cursor_pos_prev].headline);
-            }
-            else
-            {
-                multiline_hd_bar(headline_locations_80[article_cursor_pos_prev], FG_BLACK, BG_GREEN, 2,
-                    _articles[article_cursor_pos_prev].headline);
-            }
 
-            if (textMode==40)
-            {
-                multiline_hd_bar(headline_locations_40[article_cursor_pos], FG_WHITE, BG_BLUE, 3,
-                    _articles[article_cursor_pos].headline);
+                multiline_hd_bar(headline_locations_40_41[article_cursor_pos_prev], 3,
+                    _articles[article_cursor_pos_prev].headline, false);
+                multiline_hd_bar(headline_locations_40_41[article_cursor_pos], 3,
+                    _articles[article_cursor_pos].headline, true);
             }
             else
             {
-                multiline_hd_bar(headline_locations_80[article_cursor_pos], FG_WHITE, BG_BLUE, 2,
-                    _articles[article_cursor_pos].headline);
+
+                multiline_hd_bar(headline_locations_80[article_cursor_pos_prev], 2,
+                    _articles[article_cursor_pos_prev].headline, false);
+                multiline_hd_bar(headline_locations_80[article_cursor_pos], 2,
+                    _articles[article_cursor_pos].headline, true);
             }
         }   
         article_cursor_pos_prev = article_cursor_pos;
@@ -433,26 +357,27 @@ void articles_bar(void)
 ArticlesState articles_menu(void)
 {
 
-    locate(0,menu_line);
+    gotoxy(0,menu_line);
     if (textMode==32)
     {
         printf(" up/dn CHOOSE brk TOPICS\n");
         printf(" lf/rt PAGE enter VIEW gO TO PG");
     }
-    else if (textMode == 40)
+    else if (textMode == 40 || textMode == 41)
     {
-        print_lowercase_as_reverse("  up/dn  CHOOSE   break  TOPICS\n");
-        print_lowercase_as_reverse("  lf/rt  PAGE  enter  VIEW  gO TO PAGE");
+        print_reverse(0, menu_line, "  up/dn  CHOOSE   break  TOPICS", true);
+        print_reverse(0, menu_line + 1, "  lf/rt  PAGE  enter  VIEW  gO TO PAGE", true);
     }
     else
     { 
         // Centered on 80 character screen
-        print_lowercase_as_reverse("                         up/down  CHOOSE   break  TOPICS\n");
-        print_lowercase_as_reverse("                      left/right  PAGE     enter  VIEW  gO TO PAGE");
+        print_reverse(0, menu_line, "                         up/down  CHOOSE   break  TOPICS\n", true);
+        print_reverse(0, menu_line + 1, "                      left/right  PAGE     enter  VIEW  gO TO PAGE", true);
     }
     
     articles_bar();
-    locate(textMode - 1, menu_line + 1);
+    gotoxy(textMode - 1, menu_line + 1);
+
 
     switch (waitkey(false))
     {
@@ -468,6 +393,10 @@ ArticlesState articles_menu(void)
         return ARTICLES_PREV_PAGE;
     case ARROW_RIGHT:
         return ARTICLES_NEXT_PAGE;
+    case 'C':
+    case 'c':
+        switch_colorset();
+        return ARTICLES_MENU;
     case 'G':
     case 'g':
         return ARTICLES_GOTO_PAGE;
@@ -559,19 +488,19 @@ ArticlesState articles_goto_page(void)
     {
         if (textMode == 32)
         {
-            cls(2);
+            clear_screen(2);
             printf("ENTER PAGE # (1-%d)\n", maxpage);
             printf("OR -1 TO QUIT: " );
-            locate(15, 1);
+            gotoxy(15, 1);
         }
         else
         {
-            cls(1);
+            clear_screen(1);
             printf("Go to page (1-%d) or -1 to quit: ", maxpage);
-            locate(33, 0);
+            gotoxy(33, 0);
         }
 
-        p = readline();
+        get_line(p, 32);
 
         if (p[strlen(p) - 1] == '\n')
         {

@@ -11,3 +11,4 @@
 clients/_libs
 clients/_libs/**
 .gitignore
+clients/coco/.vscode/c_cpp_properties.json

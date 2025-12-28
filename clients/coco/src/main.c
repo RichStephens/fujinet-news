@@ -12,19 +12,23 @@
 #include "topics.h"
 #include "articles.h"
 #include "article.h"
+#include "cocotext.h"
 
 void init(void)
 {
     initCoCoSupport();
     textMode = getTextMode();
-    rgb();
+    if (textMode == 32)
+    {
+        // Use hires text mode by default 
+        set_text_width(41);
+    }
 }
 
 int main(void)
 {
+    clear_screen(1);
     init();
-    screen(0,1);
-    cls(1);
 
     while(1)
     {
@@ -47,6 +51,8 @@ int main(void)
             break;
     }
 
-    cls(1);
+    hirestxt_close();
+    clear_screen(1);
+    coldStart();
     return 0;
 }

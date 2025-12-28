@@ -1,101 +1,230 @@
 #include <cmoc.h>
 #include <coco.h>
 #include "fujinet-fuji.h"
+#include "hirestxt.h"
 #include "globals.h"
 #include "bar.h"
 #include "cocotext.h"
 
+//(byte *)*(byte *)0x00BC << 8 This is where BASIC puts it by default
+#define SCREEN_BUFFER (byte*) 0xA00
+
 /**
  * @brief Temp space for strupr(s) output, so original strings doesn't get changed.
  */
-char uppercase_tmp[1536];
+static char uppercase_tmp[321];
+
+byte colorset = 0;
+bool hirestxt_mode = false;
+
+void hirestxt_init(void)
+{
+    hirestxt_mode = true;
+
+    // Define a `HiResTextScreenInit` object:
+    struct HiResTextScreenInit init =
+        {
+            42,                           /* characters per row */
+            writeCharAt_42cols,           /* must be consistent with previous field */
+            SCREEN_BUFFER,                /* pointer to the text screen buffer */
+            TRUE,                         /* redirects printf() to the 42x24 text screen */
+            (word *)0x112,                /* pointer to a 60 Hz async counter (Color Basic's TIMER) */
+            0,                            /* default cursor blinking rate */
+            NULL,                         /* use inkey(), i.e., Color Basic's INKEY$ */
+            NULL,                         /* no sound on '\a' */
+        };
+
+    width(32);                               /* PMODE graphics will only appear from 32x16 (does nothing on CoCo 1&2) */
+    pmode(4, (byte *)init.textScreenBuffer); /* hires text mode */
+    pcls(255);
+    screen(1, colorset);
+    initHiResTextScreen(&init);
+}
+
+void hirestxt_close(void)
+{
+    if (hirestxt_mode)
+    {
+        hirestxt_mode = false;
+        closeHiResTextScreen();
+        width(32);
+        pmode(0, 0);
+        screen(0, 0);
+        clear_screen(255);
+    }
+}
+
+void switch_colorset(void)
+{
+    if (hirestxt_mode)
+    {
+        if (colorset == 0)
+        {
+            colorset = 1;
+        }
+        else
+        {
+            colorset = 0;
+        }
+
+        screen(1, colorset);
+    }
+}
+
+void gotoxy(byte x, byte y)
+{
+    if (hirestxt_mode)
+    {
+        moveCursor(x, y);
+    }
+    else
+    {
+        locate(x, y);
+    }
+}
+
+void cursor(unsigned char onoff)
+{
+    if (onoff)
+    {
+        animateCursor();
+    }
+    else
+    {
+        removeCursor();
+    }
+}
+
+void clear_screen(byte color)
+{
+    if (hirestxt_mode)
+    {
+        clrscr();
+    }
+    else
+    {
+        cls(color);
+    }
+}
 
 void reverse(bool onoff)
 {
     if (textMode != 32) // Nothing to do for 32
     {
-        if (onoff)
+        if (hirestxt_mode)
         {
-            attr(FG_WHITE, BG_BLUE, FALSE, FALSE);
+            setInverseVideoMode(onoff);
         }
-        else
+        else // CoCo3 40/80 mode (
         {
-            attr(FG_BLACK, BG_GREEN, FALSE, FALSE);
-        }
-    }
-}
-
-void print_lowercase_as_reverse(const char *text)
-{
-    int len = strlen(text);
-
-    if (textMode == 32)
-    {
-        putstr(text, len);
-    }
-    else // CoCO3 40/80 mode
-    {
-
-        for (int i = 0; i < len; i++)
-        {
-            if (text[i] >= 'a' && text[i] <= 'z')
+            if (onoff)
             {
-                reverse(1);
-                putchar(text[i] - 32);
+                attr(FG_WHITE, BG_BLUE, FALSE, FALSE);
             }
             else
             {
-                reverse(0);
-                putchar(text[i]);
+                attr(FG_BLACK, BG_GREEN, FALSE, FALSE);
             }
         }
-        reverse(0);
     }
 }
 
-void print_reverse(byte x, byte y, const char *text)
+void print_reverse(byte x, byte y, const char *text, bool lowercase_only)
 {
     byte *sp;
     int o = 0;
     int len = strlen(text);
 
-    locate(x,y);
+    gotoxy(x, y);
 
     if (textMode == 32)
     {
         putstr(text, len);
-        sp = (byte *)SCREEN_RAM_TOP_32 + (int)((int)y * 32) + x;
-
-        for (int i = 0; i < len; i++)
+        if (!lowercase_only) // Reverse everything
         {
-            // Only change non-semigraphics characters
-            if (*sp < 0x80)
-                *sp ^= 0x40;
-            sp++;
+            sp = (byte *)SCREEN_RAM_TOP_32 + (int)((int)y * 32) + x;
+
+            for (int i = 0; i < len; i++)
+            {
+                // Only change non-semigraphics characters
+                if (*sp < 0x80)
+                    *sp ^= 0x40;
+                sp++;
+            }
         }
     }
-    else
+    else // Hires txt or CoCo3 40/80 mode
     {
-        reverse(1);
-        putstr(text, len);
-        reverse(0);
+        if (lowercase_only)
+        {
+            for (int i = 0; i < len; i++)
+            {
+                if (text[i] >= 'a' && text[i] <= 'z')
+                {
+                    reverse(1);
+                    putchar(text[i] - 32);
+                }
+                else
+                {
+                    reverse(0);
+                    putchar(text[i]);
+                }
+            }
+            reverse(0);
+        }
+        else
+        {
+            reverse(1);
+            putstr(text, len);
+            reverse(0);
+        }
     }
 }
 
 /**
  * @brief Return uppercase string without modifying original
  */
-char *screen_upper(char *s)
+char *screen_upper(const char *s)
 {
-    memset(uppercase_tmp,0,sizeof(uppercase_tmp));
-    strcpy(uppercase_tmp,s);
+    memset(uppercase_tmp, 0, sizeof(uppercase_tmp));
+    strcpy(uppercase_tmp, s);
 
     return strupr(uppercase_tmp);
 }
 
+/**
+ * @brief Return uppercase string without modifying original
+ */
+char *screen_lower(const char *s)
+{
+    memset(uppercase_tmp, 0, sizeof(uppercase_tmp));
+    strcpy(uppercase_tmp, s);
+
+    return strlwr(uppercase_tmp);
+}
+
 void set_text_width(byte screen_width)
 {
-    width(screen_width);
+    // Do nothing if we're not really changing the width
+    if (screen_width == textMode)
+    {
+        return;
+    }
+
+    if (screen_width == 41)
+    {
+        // If we're not already in hires text mode, we need to initialize it.
+        hirestxt_init();
+    }
+    else
+    {
+        if (hirestxt_mode)
+        {
+            hirestxt_close();
+        }
+
+        width(screen_width);
+    }
 
     textMode = screen_width;
 }
@@ -103,35 +232,47 @@ void set_text_width(byte screen_width)
 void width_highlight(int i, byte y, byte width, bool highlight)
 {
     char buf[10];
-    sprintf(buf, "%d", (int) width);
+    sprintf(buf, "%d", (int)width);
 
     if (highlight)
     {
-        print_reverse((byte) i * 3, y, buf);
+        print_reverse((byte)i * 3, y, buf, false);
     }
     else
     {
-        locate((byte) i * 3, y);
+        gotoxy((byte)i * 3, y);
         printf(buf);
     }
 }
 
 byte text_width_menu(void)
 {
-    unsigned char widths[3] = {32, 40, 80};
     unsigned char menu_line;
     byte max_choice;
     int choice = 0;
+    unsigned char widths[4];
+    if (isCoCo3)
+    {
+        widths[0] = 32;
+        widths[1] = 40;
+        widths[2] = 41;
+        widths[3] = 80;
+        max_choice = 3;
+    }
+    else
+    {
+        widths[0] = 32;
+        widths[1] = 41;
+        max_choice = 1;
+    }
 
-    max_choice = 2;
     menu_line = (textMode == 32) ? 15 : 23;
 
-    locate(0, menu_line -1);
-    print_lowercase_as_reverse("l/r TO SELECT, break TO CANCEL");
-    locate(0, menu_line);
+    print_reverse(0, menu_line -1, "l/r TO SELECT, break TO CANCEL", true);
+    gotoxy(0, menu_line);
     printf("                               ");
-    locate(0, menu_line);
-    for (byte i = 0; i < max_choice +1; i++)
+    gotoxy(0, menu_line);
+    for (byte i = 0; i < max_choice + 1; i++)
     {
         if (widths[i] == textMode)
         {
@@ -147,7 +288,7 @@ byte text_width_menu(void)
     while (true)
     {
         // Move the cursor to the end of the last line
-        locate(textMode - 1, menu_line);
+        gotoxy(textMode - 1, menu_line);
         switch (waitkey(false))
         {
         case ARROW_LEFT:
@@ -175,5 +316,101 @@ byte text_width_menu(void)
             return (unsigned char)WIDTH_CANCEL;
             break;
         }
+    }
+}
+
+void show_fetching_msg(bool clear, bool articles)
+{
+    if (textMode == 32)
+    {
+        if (clear)
+        {
+            if (articles)
+            {
+                clear_screen(2);
+            }
+            else
+            {
+                clear_screen(3);
+            }
+        }
+        gotoxy(0, 0);
+        printf("%s", fetching_buf);
+    }
+    else
+    {
+        if (clear)
+        {
+            clear_screen(1);
+        }
+        hd_bar(0, fetching_buf, false);
+    }
+}
+
+byte cgetc_cursor()
+{
+    byte shift = false;
+    byte k;
+
+    while (true)
+    {
+        k = waitKeyBlinkingCursor();
+
+        if (isKeyPressed(KEY_PROBE_SHIFT, KEY_BIT_SHIFT))
+        {
+            shift = 0x00;
+        }
+        else
+        {
+            if (k > '@' && k < '[')
+                shift = 0x20;
+        }
+
+        if (k)
+            return k + shift;
+    }
+}
+
+void get_line(char *buf, uint8_t max_len)
+{
+    uint8_t c;
+    uint16_t i = 0;
+    uint8_t init_x = getCursorColumn();
+
+    if (hirestxt_mode)
+    {
+
+        do
+        {
+            gotox((byte)i + init_x);
+            cursor(1);
+            c = cgetc_cursor();
+
+            if (isprint(c))
+            {
+                putchar(c);
+                buf[i] = c;
+                if (i < max_len - 1)
+                    i++;
+            }
+            else if (c == ARROW_LEFT)
+            {
+                if (i)
+                {
+                    putchar(ARROW_LEFT);
+                    putchar(' ');
+                    putchar(ARROW_LEFT);
+                    --i;
+                }
+            }
+        } while (c != ENTER);
+        putchar('\n');
+        buf[i] = '\0';
+
+        cursor(0);
+    }
+    else
+    {
+        strcpy(buf, readline());
     }
 }

@@ -29,6 +29,10 @@
 #define BG_BLUE 2
 #define BG_RED 4
 
+#define isprint(c) (c>=0x20 && c<=0x8E)
+#undef isdigit
+#define isdigit(c) (c>=0x30 && c<=0x39)
+
 /**
  * @brief available program states
  * @enum TOPICS current topics
@@ -56,14 +60,39 @@ extern enum selected_topic selectedTopic;
 extern State state;
 
 /**
- * @brief the base URL to be prepended.
+ * @brief Current articles page
  */
-extern const char *urlBase;
+extern int articles_page;
 
 /**
- * @brief The strtok() delimiter used for returned article lists
+ * @brief Number of articles per page
  */
-extern const char *delim;
+extern int articles_per_page;
+
+/**
+ * @brief the currently selected article ID 
+ */
+extern long article_id;
+
+/**
+ * @brief current article page
+ */
+extern int article_page;
+
+/**
+ * @brief Buffer for fetching status display
+ */
+extern char fetching_buf[];
+
+/**
+ * @brief Number of rows of text to fetch
+ */
+extern int rows;
+
+/**
+ * @brief Currently selected topic
+ */
+extern const char *topic;
 
 /**
  * @brief The text mode - 32, 42, 51, 40, or 80

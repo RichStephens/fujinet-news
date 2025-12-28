@@ -13,8 +13,8 @@
 #include "bar.h"
 #include "cocotext.h"
 
-#define MENU_Y_32 3
-#define MENU_Y_40_80 8
+#define MENU_Y_16 3
+#define MENU_Y_24 8
 
 TopicState topicState = TOPICS_RESET;
 
@@ -47,61 +47,57 @@ TopicState topics_display(void)
 {
     if (textMode==32)
     {
-        cls(3);
-        locate(0, 0);
+        clear_screen(3);
+        gotoxy(0, 0);
         printf("      FUJINET  NEWS TOPICS      ");
         shadow(1, 0xA0);
         bar(0);
 
-        locate(0, MENU_Y_32);
+        gotoxy(0, MENU_Y_16);
 
-        printf(" \x99 TOP STORIES\n");
-        printf(" \x9F WORLD NEWS\n");
-        printf(" \x8F BUSINESS\n");
-        printf(" \xAF SCIENCE\n");
-        printf(" \xBF TECHNOLOGY\n");
-        printf(" \xCF HEALTH\n");
-        printf(" \xDF ENTERTAINMENT\n");
-        printf(" \xEF POLITICS\n");
-        printf(" \xFF SPORTS\n");
+        printf(" \x99 %s\n", screen_upper(topicStrings[0]));
+        printf(" \x9F %s\n", screen_upper(topicStrings[1]));
+        printf(" \x8F %s\n", screen_upper(topicStrings[2]));
+        printf(" \xAF %s\n", screen_upper(topicStrings[3]));
+        printf(" \xBF %s\n", screen_upper(topicStrings[4]));
+        printf(" \xCF %s\n", screen_upper(topicStrings[5]));
+        printf(" \xDF %s\n", screen_upper(topicStrings[6]));
+        printf(" \xEF %s\n", screen_upper(topicStrings[7]));
+        printf(" \xFF %s\n", screen_upper(topicStrings[8]));
 
         shadow(0x0C, 0xA0);
 
-        if (isCoCo3)
-        {
-            locate(0, 14);
-            print_lowercase_as_reverse("w TO CHANGE SCREEN WIDTH");
-        }
-        locate(0, 15);
+        gotoxy(0, 14);
+        printf("w TO CHANGE SCREEN WIDTH");
+
+        gotoxy(0, 15);
         printf("SELECT WITH ARROWS, THEN ENTER.");
     }
     else
     {
-        cls(1);
-        locate(0, 0);
+        clear_screen(1);
+        gotoxy(0, 0);
         switch (textMode)
         {
         case 40:
-            hd_bar(0, FG_WHITE, BG_BLUE, "          FUJINET  NEWS TOPICS");
+        case 41:
+            hd_bar(0, "          FUJINET  NEWS TOPICS", true);
             break;
         case 80:
-            hd_bar(0, FG_WHITE, BG_BLUE, "                              FUJINET  NEWS TOPICS");
+            hd_bar(0, "                              FUJINET  NEWS TOPICS", true);
             break;
         }
 
-        locate(0, MENU_Y_40_80 - 1);
+        gotoxy(0, MENU_Y_24 - 1);
 
         for (byte i =0; i < 9; i++)
         { 
-            hd_bar(i + MENU_Y_40_80, FG_BLACK, BG_GREEN, (char *)topicStrings[i]);
+            hd_bar(i + MENU_Y_24, (char *)topicStrings[i], false);
         }
 
-        if (isCoCo3)
-        {
-            locate(0, 22);
-            print_lowercase_as_reverse("w TO CHANGE SCREEN WIDTH");
-        }
-        hd_bar(23, FG_BLACK, BG_GREEN, "SELECT WITH ARROWS, THEN ENTER.");
+        print_reverse(0, 22, "w TO CHANGE SCREEN WIDTH", true);
+
+        hd_bar(23, "SELECT WITH ARROWS, THEN ENTER.", false);
     }
 
     return TOPICS_MENU;
@@ -111,7 +107,7 @@ void select_screen_width(void)
 {
     byte width_return = text_width_menu();
 
-    if (width_return != WIDTH_CANCEL && width_return != textMode)
+    if (width_return != WIDTH_CANCEL)
     {
         set_text_width(width_return);
     }
@@ -124,13 +120,13 @@ TopicState topics_menu()
         topicChanged = 0;
         if (textMode == 32)
         {
-            bar(selectedTopic + MENU_Y_32);
-            locate(15, textMode-1);
+            bar(selectedTopic + MENU_Y_16);
+            gotoxy(15, textMode-1);
         }
         else
         {
-            hd_bar((byte) selectedTopic + MENU_Y_40_80, FG_WHITE, BG_BLUE, topicStrings[selectedTopic]);
-            locate(23, textMode-1);
+            hd_bar((byte) selectedTopic + MENU_Y_24, topicStrings[selectedTopic], true);
+            gotoxy(23, textMode-1);
         }
     }
 
@@ -146,13 +142,14 @@ TopicState topics_menu()
             return TOPICS_SELECT;
         case BREAK:
             return TOPICS_EXIT;
+        case 'C':
+        case 'c':
+            switch_colorset();
+        return topicState;
         case 'W':
         case 'w':
-            if (isCoCo3)
-            {
-                select_screen_width();
-                return TOPICS_RESET;
-            }
+            select_screen_width();
+            return TOPICS_RESET;
         }
     }
 }
@@ -163,13 +160,13 @@ TopicState topics_up()
     {
         if (textMode == 32)
         {
-            bar(selectedTopic + MENU_Y_32);
-            locate(15, textMode-1);
+            bar(selectedTopic + MENU_Y_16);
+            gotoxy(15, textMode-1);
         }
         else
         {
-            hd_bar((byte) selectedTopic + MENU_Y_40_80, FG_BLACK, BG_GREEN, topicStrings[selectedTopic]);
-            locate(23, textMode-1);
+            hd_bar((byte) selectedTopic + MENU_Y_24, topicStrings[selectedTopic], false);
+            gotoxy(23, textMode-1);
         }
 
         selectedTopic--;
@@ -185,13 +182,13 @@ TopicState topics_down()
     {
         if (textMode == 32)
         {
-            bar(selectedTopic + MENU_Y_32);
-            locate(15, textMode-1);
+            bar(selectedTopic + MENU_Y_16);
+            gotoxy(15, textMode-1);
         }
         else
         {
-            hd_bar((byte) selectedTopic + MENU_Y_40_80, FG_BLACK, BG_GREEN, topicStrings[selectedTopic]);
-            locate(23, textMode-1);
+            hd_bar((byte) selectedTopic + MENU_Y_24, topicStrings[selectedTopic], false);
+            gotoxy(23, textMode-1);
         }
 
         selectedTopic++;
