@@ -46,7 +46,7 @@ const char *category_num_to_name(int c)
 };
 
 const byte headline_locations_32[3] = {1, 5, 9};
-const byte headline_locations_40_41 [5]= {1, 5, 9, 13, 17};
+const byte headline_locations_40_42 [5]= {1, 5, 9, 13, 17};
 const byte headline_locations_80[6] = {1, 4, 7, 10, 13, 16};
 
 
@@ -70,18 +70,20 @@ ArticlesState articles_reset(void)
     {
         menu_line = 22;
         rows = 21;
-        if (textMode == 40 || textMode == 41)
+        switch (textMode)
         {
+        case 40:
+        case 42:
             articles_per_page = 5;
             headline_length = 120;
-        }
-        else
-        {
+            break;
+        case 80:
             articles_per_page = 6;
             headline_length = 160;
-        }   
+            break;
+        }
     }
-    
+
     memset(_articles, 0, MAX_ARTICLES_PER_PAGE * sizeof(struct Article));
 
     return ARTICLES_FETCH;
@@ -261,10 +263,10 @@ ArticlesState articles_display(void)
                     y = headline_locations_32[i] - 1;
                     break;
                     case 40:
-                    case 41:
+                    case 42:
                     w1 = textMode;
                     w2 = 120;
-                    y = headline_locations_40_41[i] - 1;
+                    y = headline_locations_40_42[i] - 1;
                     break;
                 case 80:
                     w1 = textMode;
@@ -295,16 +297,18 @@ ArticlesState articles_display(void)
         else
         {
             hd_bar(menu_line - 1, format_topic_line(page, topicStrings[selectedTopic], textMode), true);
-         
-            if (textMode == 40 || textMode == 41)
-            {      
-                multiline_hd_bar(headline_locations_40_41[article_cursor_pos], 3,
-                    _articles[article_cursor_pos].headline, true);
-            }
-            else
+
+            switch (textMode)
             {
+            case 40:
+            case 42:
+                multiline_hd_bar(headline_locations_40_42[article_cursor_pos], 3,
+                                 _articles[article_cursor_pos].headline, true);
+                break;
+            case 80:
                 multiline_hd_bar(headline_locations_80[article_cursor_pos], 2,
-                    _articles[article_cursor_pos].headline, true);
+                                 _articles[article_cursor_pos].headline, true);
+                break;
             }
         }
     }
@@ -330,21 +334,22 @@ void articles_bar(void)
         }
         else
         {
-            if (textMode == 40 || textMode == 41)
+            switch (textMode)
             {
-
-                multiline_hd_bar(headline_locations_40_41[article_cursor_pos_prev], 3,
-                    _articles[article_cursor_pos_prev].headline, false);
-                multiline_hd_bar(headline_locations_40_41[article_cursor_pos], 3,
-                    _articles[article_cursor_pos].headline, true);
-            }
-            else
-            {
+            case 40:
+            case 42:
+                multiline_hd_bar(headline_locations_40_42[article_cursor_pos_prev], 3,
+                                 _articles[article_cursor_pos_prev].headline, false);
+                multiline_hd_bar(headline_locations_40_42[article_cursor_pos], 3,
+                                 _articles[article_cursor_pos].headline, true);
+                break;
+            case 80:
 
                 multiline_hd_bar(headline_locations_80[article_cursor_pos_prev], 2,
-                    _articles[article_cursor_pos_prev].headline, false);
+                                 _articles[article_cursor_pos_prev].headline, false);
                 multiline_hd_bar(headline_locations_80[article_cursor_pos], 2,
-                    _articles[article_cursor_pos].headline, true);
+                                 _articles[article_cursor_pos].headline, true);
+                break;
             }
         }   
         article_cursor_pos_prev = article_cursor_pos;
@@ -356,25 +361,28 @@ void articles_bar(void)
  */
 ArticlesState articles_menu(void)
 {
-
     gotoxy(0,menu_line);
-    if (textMode==32)
+
+    switch (textMode)
     {
+    case 32:
+
         printf(" up/dn CHOOSE brk TOPICS\n");
         printf(" lf/rt PAGE enter VIEW gO TO PG");
-    }
-    else if (textMode == 40 || textMode == 41)
-    {
+        break;
+    case 40:
+    case 42:
+
         print_reverse(0, menu_line, "  up/dn  CHOOSE   break  TOPICS", true);
         print_reverse(0, menu_line + 1, "  lf/rt  PAGE  enter  VIEW  gO TO PAGE", true);
-    }
-    else
-    { 
+        break;
+    case 80:
         // Centered on 80 character screen
         print_reverse(0, menu_line, "                         up/down  CHOOSE   break  TOPICS\n", true);
         print_reverse(0, menu_line + 1, "                      left/right  PAGE     enter  VIEW  gO TO PAGE", true);
+        break;
     }
-    
+
     articles_bar();
     gotoxy(textMode - 1, menu_line + 1);
 

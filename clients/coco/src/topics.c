@@ -80,7 +80,7 @@ TopicState topics_display(void)
         switch (textMode)
         {
         case 40:
-        case 41:
+        case 42:
             hd_bar(0, "          FUJINET  NEWS TOPICS", true);
             break;
         case 80:

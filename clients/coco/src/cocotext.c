@@ -211,7 +211,7 @@ void set_text_width(byte screen_width)
         return;
     }
 
-    if (screen_width == 41)
+    if (screen_width == 42)
     {
         // If we're not already in hires text mode, we need to initialize it.
         hirestxt_init();
@@ -255,14 +255,14 @@ byte text_width_menu(void)
     {
         widths[0] = 32;
         widths[1] = 40;
-        widths[2] = 41;
+        widths[2] = 42;
         widths[3] = 80;
         max_choice = 3;
     }
     else
     {
         widths[0] = 32;
-        widths[1] = 41;
+        widths[1] = 42;
         max_choice = 1;
     }
 
