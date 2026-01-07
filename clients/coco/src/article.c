@@ -111,16 +111,19 @@ ArticleState article_display(void)
     {
         clear_screen(1);
 
-        if (textMode == 40 || textMode == 41)
+        switch (textMode)
         {
+        case 40:
+        case 42:
+
             multiline_hd_bar(0, 3, articles_display_headline(title), true);
-            printf("\n\n");
-        }
-        else
-        {
+            break;
+        case 80:
             multiline_hd_bar(0, 2, articles_display_headline(title), true);
-            printf("\n\n");
+            break;
         }
+
+        printf("\n\n");
         printf("%s", pageData);
     }
 
@@ -171,13 +174,15 @@ ArticleState article_menu(void)
     }
     else
     {
-        if (textMode == 40 || textMode == 41)
+        switch (textMode)
         {
+        case 40:
+        case 42:
             print_reverse(0, menu_line, format_menu_line(page, "up/dn iNFO  break ARTICLES", textMode), true);
-        }
-        else
-        {
+            break;
+        case 80:
             print_reverse(0, menu_line, format_menu_line(page, "up/down iNFO break ARTICLES", textMode), true);
+            break;
         }
     }
 
@@ -255,30 +260,36 @@ ArticleState article_info(void)
     {
         clear_screen(1);
 
-        if (textMode == 40 || textMode == 41)
+        switch (textMode)
         {
+        case 40:
+        case 42:
+
             multiline_hd_bar(0, 3, articles_display_headline(title), true);
-            gotoxy (0, 5);
+            gotoxy(0, 5);
             printf("%13s%s\n", "Date:", date);
             printf("%13s%s", "Source:", source);
-        }
-        else
-        {
+            break;
+        case 80:
             multiline_hd_bar(0, 2, articles_display_headline(title), true);
-            gotoxy(0,4);
+            gotoxy(0, 4);
             printf("%33s%s\n", "Date:", date);
             printf("%33s%s", "Source:", source);
+            break;
         }
 
         gotoxy(0, menu_line);
 
-        if (textMode == 40 || textMode == 41)
+        switch (textMode)
         {
+        case 40:
+        case 42:
+
             printf("      <Press any key to continue>");
-        }
-        else
-        {
+            break;
+        case 80:
             printf("                            <Press any key to continue>");
+            break;
         }
     }
 

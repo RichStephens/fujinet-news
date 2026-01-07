@@ -21,7 +21,7 @@ void init(void)
     if (textMode == 32)
     {
         // Use hires text mode by default 
-        set_text_width(41);
+        set_text_width(42);
     }
 }
 

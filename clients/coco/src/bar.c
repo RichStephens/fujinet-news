@@ -55,47 +55,34 @@ void shadow(int y, int c)
     memset(sp+1,c | 0x03, 31);
 }
 
-void hd_bar(byte y, const char *text, bool rev)  
+void hd_bar(byte y, const char *text, bool rev)
 {
     gotoxy(0, y);
+    int width;
 
-    reverse(rev);
-
-    if (textMode == 40 | textMode == 41)
+    if (hirestxt_mode)
     {
-        if (hirestxt_mode)
-        {
-            printf("%-41s", text);
-        }
-        else
-        {
-            printf("%-39s", text);
-        }
+        width = textMode;
     }
     else
     {
-        printf("%-79s", text);
+        width = textMode - 1;
     }
+
+    reverse(rev);
+
+    printf("%-*s", width, text);
 
     reverse(false);
 }
 
 void multiline_hd_bar(byte y, int lines, const char *text, bool rev)
 {
-    char fmtstr[8];
-    int modifier = 0;
     gotoxy(0, y);
 
     reverse(rev);
 
     printf("%-*s", (textMode * lines), text);
-
-    // Kludge I'm not proud of: Reverse or clear those last 3 characters
-    if (hirestxt_mode && lines == 3)
-    {
-        gotoxy(39, y + 2);
-        printf("   ");
-    }
 
     reverse(false);
 }
