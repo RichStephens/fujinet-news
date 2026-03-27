@@ -25,7 +25,7 @@ SRC_DIRS = src src/%PLATFORM%
 # - a URL to a git repo
 # - empty which will use whatever is the latest
 # - undefined, no fujinet-lib will be used
-FUJINET_LIB = 
+FUJINET_LIB = https://github.com/FozzTexx/fujinet-lib-experimental.git\#msdos-fep-004
 
 # Some platforms don’t use FUJINET_LIB; set this to allow builds to continue
 # even if the library isn’t present.

@@ -60,13 +60,13 @@ void articles(void)
     unsigned char item=0;
     union REGS r;
     struct SREGS sr;
-    
+
     _fgColor = WHITE;
     _bgColor = BLUE;
-        
+
     column_offset = 0;
     selected_article_page=1;
-    
+
     clrscr();
     cputs((max_cols / 2) - (strlen(fetching_articles)/2),11,fetching_articles);
 
@@ -78,7 +78,7 @@ void articles(void)
 
     page = strtok(articles_data,"\n");
     p = strtok(NULL,"|");
-    
+
     clrscr();
 
     // Title box
@@ -90,11 +90,11 @@ void articles(void)
 
     // Keys
     cputs(0,22,"[\x18\x19] CHOOSE   [PgUp/PgDn] CHANGE PAGE   [\x11\xD9] SELECT  [ESC] TOPICS");
-    
+
     while (p != NULL)
     {
         char title[240];
-        
+
         // Article box
         _fgColor = WHITE;
         _bgColor = BLUE;
@@ -102,7 +102,7 @@ void articles(void)
         _fgColor = BLACK;
         _bgColor = CYAN;
         box(0,articles_on_this_page*4+1+1,max_cols-1,articles_on_this_page*4+4+1);
-        
+
         // Timestamp
         article_ids[articles_on_this_page] = atol(p);
         p=strtok(NULL,"|");
@@ -113,7 +113,7 @@ void articles(void)
         p=strtok(NULL,"\n");
         strncpy(title,p,max_cols*3);
         cputs(0,articles_on_this_page*4+1+1,title);
-        
+
         p = strtok(NULL, "|");
 
         articles_on_this_page++;
