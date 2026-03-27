@@ -9,6 +9,8 @@ CFLAGS +=
 ASFLAGS +=
 LDFLAGS +=
 
+CFLAGS += -DGIT_VERSION='\"$(GIT_VERSION)\"'
+
 define include-dir-flag
   -I$1
 endef
@@ -34,7 +36,7 @@ define link-bin
 endef
 
 define compile
-  $(CC) -c $(CFLAGS) -o $1 $2
+  $(CC) -c $(CFLAGS) -o $1 $2 -MT $(1:.o=.d) -MMD
 endef
 
 define assemble

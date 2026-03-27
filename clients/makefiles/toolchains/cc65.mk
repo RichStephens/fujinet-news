@@ -9,6 +9,8 @@ CFLAGS += -O --cpu 6502
 ASFLAGS += --cpu 6502
 LDFLAGS +=
 
+CFLAGS += -DGIT_VERSION='"$(GIT_VERSION)"'
+
 define include-dir-flag
   --include-dir $1
 endef
@@ -34,9 +36,13 @@ define link-bin
 endef
 
 define compile
-  $(CC) -l $(basename $1).lst --create-dep $(OBJ_DIR)/$(basename $(notdir $2)).d -c $(CFLAGS) -t $(PLATFORM) -o $1 $2
+  $(CC) -l $(basename $1).lst \
+        --create-dep $(1:.o=.d) \
+        -c $(CFLAGS) -t $(PLATFORM) -o $1 $2
 endef
 
 define assemble
-  $(AS) -l $(basename $1).lst -c $(ASFLAGS) -t $(PLATFORM) -o $1 $2
+  $(AS) -l $(basename $1).lst \
+        --create-dep $(1:.o=.d) \
+        -c $(ASFLAGS) -t $(PLATFORM) -o $1 $2
 endef

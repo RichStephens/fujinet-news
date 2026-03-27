@@ -5,7 +5,7 @@ MWD := $(realpath $(dir $(lastword $(MAKEFILE_LIST)))..)
 include $(MWD)/common.mk
 include $(MWD)/toolchains/z88dk.mk
 
-MSX_FLAGS = +msx
+MSX_FLAGS = +cpm -create-app
 CFLAGS += $(MSX_FLAGS)
 LDFLAGS += $(MSX_FLAGS)
 ifneq ($(IS_LIBRARY),1)

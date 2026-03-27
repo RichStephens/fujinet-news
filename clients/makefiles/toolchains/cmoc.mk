@@ -9,6 +9,8 @@ CFLAGS += --intdir=$(OBJ_DIR)
 ASFLAGS +=
 LDFLAGS +=
 
+CFLAGS += -DGIT_VERSION='"$(GIT_VERSION)"'
+
 # Needed because of using sed on error messages
 SHELL = /bin/bash -o pipefail
 
@@ -37,7 +39,7 @@ define link-bin
 endef
 
 define compile
-  $(CC) -c $(CFLAGS) --deps=$(OBJ_DIR)/$(basename $(notdir $2)).d -o $1 $2
+  $(CC) -c $(CFLAGS) --deps=$(1:.o=.d) -o $1 $2
 endef
 
 define assemble
