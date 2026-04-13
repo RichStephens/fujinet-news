@@ -8,6 +8,9 @@
 *.dsk
 .vscode/settings.json
 .vscode/c_cpp_properties.json
+*.xex
+*.exe
+*~
 clients/_libs
 clients/_libs/**
 .gitignore
