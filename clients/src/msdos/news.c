@@ -15,6 +15,7 @@
 void main(void)
 {
     mode(-1);
+    cursor(0);
 
     while(1)
     {
@@ -36,7 +37,7 @@ void main(void)
             article();
             break;
         case EXIT:
-            clrscr();
+            cleanup();
             exit(0);
         }
     }    

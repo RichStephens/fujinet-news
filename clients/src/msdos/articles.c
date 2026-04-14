@@ -46,7 +46,8 @@ void articles_pu(void)
 
 void articles_pd(void)
 {
-    selected_articles_page++;
+    if (selected_articles_page < selected_articles_page_max)
+        selected_articles_page++;
 
     state=ARTICLES;
 }
@@ -78,6 +79,12 @@ void articles(void)
 
     page = strtok(articles_data,"\n");
     p = strtok(NULL,"|");
+
+    {
+        char *slash = strchr(page, '/');
+        if (slash)
+            selected_articles_page_max = atoi(slash + 1);
+    }
 
     clrscr();
 
