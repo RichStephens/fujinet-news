@@ -19,8 +19,10 @@ unsigned char max_cols=80;
 unsigned char column_offset = 0;
 
 int selected_articles_page = 1;
+int selected_articles_page_max = 1;
 
 int selected_article_page = 1;
+int selected_article_page_max = 1;
 
 unsigned long selected_article = 0UL;
 

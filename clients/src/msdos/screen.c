@@ -35,6 +35,9 @@ static union REGS r;
  */
 static unsigned char far *_vram;
 
+static signed char saved_mode = 0x03;
+static unsigned char saved_attr = 0x07;
+
 /**
  * @brief get/set BIOS output mode
  * @param newmode -1 = Get, other = set mode
@@ -42,6 +45,8 @@ static unsigned char far *_vram;
  */
 signed char mode(signed char newmode)
 {
+    static int first_call = 1;
+
     // Set active page to 0
     r.h.ah = 0x05;
     r.h.al = 0;
@@ -87,6 +92,12 @@ signed char mode(signed char newmode)
     }
 
     max_cols = r.h.ah;
+
+    if (first_call) {
+        first_call = 0;
+        saved_mode = r.h.al;
+        saved_attr = _vram[1];
+    }
 
     return r.h.al;
 }
@@ -230,4 +241,27 @@ int getk(void)
     int86(0x16,&r,&r);
 
     return r.x.ax;
+}
+
+void cursor(int on)
+{
+    r.h.ah = 0x01;
+    r.h.bh = 0x00;
+    if (on) {
+        r.h.ch = 0x06;
+        r.h.cl = 0x07;
+    } else {
+        r.h.ch = 0x20;
+        r.h.cl = 0x00;
+    }
+    int86(0x10, &r, &r);
+}
+
+void cleanup(void)
+{
+    cursor(1);
+    mode(saved_mode);
+    _bgColor = (saved_attr >> 4) & 0x07;
+    _fgColor = saved_attr & 0x0F;
+    clrscr();
 }

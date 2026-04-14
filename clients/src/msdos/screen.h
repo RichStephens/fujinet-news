@@ -39,5 +39,7 @@ void clrscr(void);
 void cputc(unsigned char x, unsigned char y, const unsigned char c);
 void cputs(unsigned char x, unsigned char y, const char *s);
 int getk(void);
+void cursor(int on);
+void cleanup(void);
 
 #endif /* SCREEN_H */

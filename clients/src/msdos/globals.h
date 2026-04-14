@@ -33,9 +33,11 @@ extern unsigned char selected_topic;
 extern const char *urlBase;
 
 extern int selected_articles_page;
+extern int selected_articles_page_max;
 
 extern unsigned long selected_article;
 
 extern int selected_article_page;
+extern int selected_article_page_max;
 
 #endif /* GLOBALS_H */
